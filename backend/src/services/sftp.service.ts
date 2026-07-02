@@ -184,12 +184,26 @@ class SftpService extends EventEmitter implements FileManagerService {
   }
 
   async readTextFile(filePath: string, maxSize: number): Promise<string> {
-    const info = await this.stat(filePath);
-    if (info.type !== 'file') {
-      throw new Error('Not a regular file');
+    const buf = await this.readBuffer(filePath, maxSize);
+    if (buf.includes(0)) {
+      throw new Error('File appears to be binary');
     }
-    if (info.size > maxSize) {
-      throw new Error(`File is too large to edit (${info.size} bytes, limit ${maxSize})`);
+    return buf.toString('utf8');
+  }
+
+  async writeTextFile(filePath: string, content: string): Promise<void> {
+    await this.writeBuffer(filePath, Buffer.from(content, 'utf8'));
+  }
+
+  async readBuffer(filePath: string, maxSize?: number): Promise<Buffer> {
+    if (maxSize !== undefined) {
+      const info = await this.stat(filePath);
+      if (info.type !== 'file') {
+        throw new Error('Not a regular file');
+      }
+      if (info.size > maxSize) {
+        throw new Error(`File is too large (${info.size} bytes, limit ${maxSize})`);
+      }
     }
     const sftp = await this.ensureConnected();
     return new Promise((resolve, reject) => {
@@ -197,19 +211,8 @@ class SftpService extends EventEmitter implements FileManagerService {
       const stream = sftp.createReadStream(filePath);
       stream.on('data', (chunk: Buffer) => chunks.push(chunk));
       stream.on('error', reject);
-      stream.on('end', () => {
-        const buf = Buffer.concat(chunks);
-        if (buf.includes(0)) {
-          reject(new Error('File appears to be binary'));
-          return;
-        }
-        resolve(buf.toString('utf8'));
-      });
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
     });
-  }
-
-  async writeTextFile(filePath: string, content: string): Promise<void> {
-    await this.writeBuffer(filePath, Buffer.from(content, 'utf8'));
   }
 
   async writeBuffer(filePath: string, data: Buffer): Promise<void> {

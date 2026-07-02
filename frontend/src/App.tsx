@@ -9,12 +9,15 @@ import Layout from './components/Layout';
 import Login from './components/Login';
 import Dashboard from './components/tabs/Dashboard';
 import RconConsole from './components/tabs/RconConsole';
-import Plugins from './components/tabs/Plugins';
 
-// Lazy-loaded: these pull in xterm.js / Monaco, which are large and only
-// needed once the user actually visits the SSH or file manager tab.
+// Lazy-loaded: none of these are needed for the initial Dashboard render,
+// so they're split into their own chunks and fetched on first visit.
 const SshTerminal = lazy(() => import('./components/tabs/SshTerminal'));
 const SftpManager = lazy(() => import('./components/tabs/SftpManager'));
+const Plugins = lazy(() => import('./components/tabs/Plugins'));
+const Backups = lazy(() => import('./components/tabs/Backups'));
+const ScheduledTasks = lazy(() => import('./components/tabs/ScheduledTasks'));
+const ServerProperties = lazy(() => import('./components/tabs/ServerProperties'));
 
 function TabFallback() {
   return (
@@ -57,7 +60,38 @@ export default function App() {
                   </Suspense>
                 }
               />
-              <Route path="plugins" element={<Plugins />} />
+              <Route
+                path="plugins"
+                element={
+                  <Suspense fallback={<TabFallback />}>
+                    <Plugins />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="backups"
+                element={
+                  <Suspense fallback={<TabFallback />}>
+                    <Backups />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="scheduler"
+                element={
+                  <Suspense fallback={<TabFallback />}>
+                    <ScheduledTasks />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="server-properties"
+                element={
+                  <Suspense fallback={<TabFallback />}>
+                    <ServerProperties />
+                  </Suspense>
+                }
+              />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
