@@ -105,12 +105,13 @@ export default function RconConsole() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Enter RCON command..."
-          className="flex-1 rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 font-mono text-sm text-panel-text outline-none focus:border-panel-accent"
+          disabled={!connected}
+          placeholder={connected ? 'Enter RCON command...' : 'Reconnecting...'}
+          className="flex-1 rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 font-mono text-sm text-panel-text outline-none focus:border-panel-accent disabled:opacity-50"
         />
         <button
           onClick={submit}
-          disabled={!input.trim()}
+          disabled={!input.trim() || !connected}
           className="rounded-lg bg-panel-accent2 px-4 py-2 text-sm font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
         >
           Send

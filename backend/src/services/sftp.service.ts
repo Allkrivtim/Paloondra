@@ -2,34 +2,20 @@ import { Client, SFTPWrapper, FileEntry as Ssh2FileEntry } from 'ssh2';
 import { EventEmitter } from 'events';
 import path from 'path';
 import { buildSshConnectConfig } from './ssh.service';
+import { modeToPermissions } from './fsUtils';
+import { FileEntry, FileManagerService } from '../types';
 
 const MIN_BACKOFF_MS = 2000;
 const MAX_BACKOFF_MS = 30000;
 
-export interface SftpEntry {
-  name: string;
-  path: string;
-  type: 'file' | 'directory' | 'symlink' | 'other';
-  size: number;
-  permissions: string;
-  modifiedAt: number;
-}
-
-function modeToType(mode: number): SftpEntry['type'] {
+function modeToType(mode: number): FileEntry['type'] {
   if ((mode & 0o170000) === 0o040000) return 'directory';
   if ((mode & 0o170000) === 0o120000) return 'symlink';
   if ((mode & 0o170000) === 0o100000) return 'file';
   return 'other';
 }
 
-function modeToPermissions(mode: number): string {
-  const perms = mode & 0o777;
-  const rwx = (bits: number) =>
-    `${bits & 4 ? 'r' : '-'}${bits & 2 ? 'w' : '-'}${bits & 1 ? 'x' : '-'}`;
-  return `${rwx((perms >> 6) & 7)}${rwx((perms >> 3) & 7)}${rwx(perms & 7)}`;
-}
-
-function toEntry(dirPath: string, item: Ssh2FileEntry): SftpEntry {
+function toEntry(dirPath: string, item: Ssh2FileEntry): FileEntry {
   const mode = item.attrs.mode ?? 0;
   return {
     name: item.filename,
@@ -41,11 +27,11 @@ function toEntry(dirPath: string, item: Ssh2FileEntry): SftpEntry {
   };
 }
 
-class SftpService extends EventEmitter {
+/** Talks to the target server over the raw SFTP subsystem (ssh2). */
+class SftpService extends EventEmitter implements FileManagerService {
   private client: Client | null = null;
   private sftp: SFTPWrapper | null = null;
   private connected = false;
-  private connecting = false;
   private backoff = MIN_BACKOFF_MS;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private connectPromise: Promise<SFTPWrapper> | null = null;
@@ -62,14 +48,12 @@ class SftpService extends EventEmitter {
     if (this.sftp && this.connected) return Promise.resolve(this.sftp);
     if (this.connectPromise) return this.connectPromise;
 
-    this.connecting = true;
     this.connectPromise = new Promise((resolve, reject) => {
       const client = new Client();
 
       client.on('ready', () => {
         client.sftp((err, sftp) => {
           if (err) {
-            this.connecting = false;
             this.connectPromise = null;
             this.scheduleReconnect();
             reject(err);
@@ -78,7 +62,6 @@ class SftpService extends EventEmitter {
           this.client = client;
           this.sftp = sftp;
           this.connected = true;
-          this.connecting = false;
           this.backoff = MIN_BACKOFF_MS;
           this.connectPromise = null;
           this.emit('status', { connected: true });
@@ -89,7 +72,6 @@ class SftpService extends EventEmitter {
       });
 
       client.on('error', (err) => {
-        this.connecting = false;
         this.connectPromise = null;
         this.handleDisconnect();
         reject(err);
@@ -98,9 +80,8 @@ class SftpService extends EventEmitter {
       try {
         client.connect(buildSshConnectConfig());
       } catch (err) {
-        this.connecting = false;
         this.connectPromise = null;
-        reject(err);
+        reject(err instanceof Error ? err : new Error(String(err)));
       }
     });
 
@@ -113,7 +94,6 @@ class SftpService extends EventEmitter {
     this.client = null;
     this.sftp = null;
     this.connected = false;
-    this.connecting = false;
     if (wasConnected) this.emit('status', { connected: false });
     this.scheduleReconnect();
   }
@@ -127,7 +107,7 @@ class SftpService extends EventEmitter {
     }, this.backoff);
   }
 
-  async list(dirPath: string): Promise<SftpEntry[]> {
+  async list(dirPath: string): Promise<FileEntry[]> {
     const sftp = await this.ensureConnected();
     return new Promise((resolve, reject) => {
       sftp.readdir(dirPath, (err, list) => {
@@ -143,7 +123,7 @@ class SftpService extends EventEmitter {
     });
   }
 
-  async stat(targetPath: string): Promise<SftpEntry> {
+  async stat(targetPath: string): Promise<FileEntry> {
     const sftp = await this.ensureConnected();
     return new Promise((resolve, reject) => {
       sftp.stat(targetPath, (err, stats) => {
@@ -229,23 +209,29 @@ class SftpService extends EventEmitter {
   }
 
   async writeTextFile(filePath: string, content: string): Promise<void> {
+    await this.writeBuffer(filePath, Buffer.from(content, 'utf8'));
+  }
+
+  async writeBuffer(filePath: string, data: Buffer): Promise<void> {
     const sftp = await this.ensureConnected();
     return new Promise((resolve, reject) => {
       const stream = sftp.createWriteStream(filePath);
       stream.on('error', reject);
       stream.on('close', () => resolve());
-      stream.end(Buffer.from(content, 'utf8'));
+      stream.end(data);
     });
   }
 
-  async createReadStream(filePath: string) {
+  async createReadStream(filePath: string): Promise<NodeJS.ReadableStream> {
     const sftp = await this.ensureConnected();
     return sftp.createReadStream(filePath);
   }
 
-  async createWriteStream(filePath: string) {
+  async resolveHome(): Promise<string> {
     const sftp = await this.ensureConnected();
-    return sftp.createWriteStream(filePath);
+    return new Promise((resolve, reject) => {
+      sftp.realpath('.', (err, resolved) => (err ? reject(err) : resolve(resolved)));
+    });
   }
 }
 

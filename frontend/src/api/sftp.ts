@@ -1,6 +1,11 @@
 import { api } from './client';
 import { SftpEntry } from '../types';
 
+export async function getDefaultPath(): Promise<string> {
+  const res = await api.get('/sftp/default-path');
+  return res.data.path;
+}
+
 export async function listDir(path: string): Promise<{ path: string; entries: SftpEntry[] }> {
   const res = await api.get('/sftp/list', { params: { path } });
   return res.data;

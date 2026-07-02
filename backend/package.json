@@ -1,8 +1,8 @@
 {
-  "name": "mc-admin-backend",
+  "name": "paloondra-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Backend for the Minecraft server admin panel. Orchestrates shell scripts, RCON, SSH and SFTP - never touches the server process directly.",
+  "description": "Paloondra backend - a Minecraft server admin panel that orchestrates shell scripts, RCON, SSH and SFTP, and never touches the server process directly.",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

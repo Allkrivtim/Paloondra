@@ -16,8 +16,7 @@ export default function Layout() {
     <div className="flex h-full flex-col bg-panel-bg">
       <header className="flex items-center justify-between border-b border-panel-border bg-panel-surface px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-lg">⛏️</span>
-          <h1 className="text-sm font-semibold text-panel-text sm:text-base">Minecraft Admin Panel</h1>
+          <h1 className="text-sm font-semibold text-panel-text sm:text-base">Paloondra</h1>
         </div>
         <div className="flex items-center gap-3 text-sm text-panel-muted">
           <span className="hidden sm:inline">{username}</span>

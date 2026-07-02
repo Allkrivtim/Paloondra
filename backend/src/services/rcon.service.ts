@@ -15,9 +15,9 @@ export interface RconResult {
 class RconService extends EventEmitter {
   private client: Rcon | null = null;
   private connected = false;
-  private connecting = false;
   private backoff = MIN_BACKOFF_MS;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private connectPromise: Promise<Rcon> | null = null;
 
   getStatus(): ServerStatus {
     return {
@@ -32,44 +32,62 @@ class RconService extends EventEmitter {
   }
 
   start(): void {
-    void this.connect();
+    this.ensureConnected().catch(() => undefined);
   }
 
-  private async connect(): Promise<void> {
-    if (this.connecting || this.connected) return;
-    this.connecting = true;
-    try {
-      const client = new Rcon({
-        host: env.rcon.host,
-        port: env.rcon.port,
-        password: env.rcon.password,
-        timeout: 5000,
-      });
+  /**
+   * Resolves once connected, reusing any attempt already in flight. Issuing
+   * a command while disconnected triggers an immediate attempt instead of
+   * waiting out the backoff timer - a user typing a command is explicit
+   * intent that deserves an eager retry.
+   */
+  private ensureConnected(): Promise<Rcon> {
+    if (this.client && this.connected) return Promise.resolve(this.client);
+    if (this.connectPromise) return this.connectPromise;
 
-      client.on('end', () => this.handleDisconnect());
-      client.on('error', () => this.handleDisconnect());
-
-      await client.connect();
-
-      this.client = client;
-      this.connected = true;
-      this.connecting = false;
-      this.backoff = MIN_BACKOFF_MS;
-      this.emit('status', this.getStatus());
-    } catch {
-      this.connecting = false;
-      this.client = null;
-      this.connected = false;
-      this.emit('status', this.getStatus());
-      this.scheduleReconnect();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
     }
+
+    this.connectPromise = (async () => {
+      try {
+        const client = new Rcon({
+          host: env.rcon.host,
+          port: env.rcon.port,
+          password: env.rcon.password,
+          timeout: 5000,
+        });
+
+        client.on('end', () => this.handleDisconnect());
+        client.on('error', () => this.handleDisconnect());
+
+        await client.connect();
+
+        this.client = client;
+        this.connected = true;
+        this.backoff = MIN_BACKOFF_MS;
+        this.connectPromise = null;
+        this.emit('status', this.getStatus());
+        return client;
+      } catch (err) {
+        this.connectPromise = null;
+        this.client = null;
+        this.connected = false;
+        this.emit('status', this.getStatus());
+        this.scheduleReconnect();
+        throw err;
+      }
+    })();
+
+    return this.connectPromise;
   }
 
   private handleDisconnect(): void {
-    if (!this.connected && !this.connecting) return;
-    this.connected = false;
+    const wasConnected = this.connected;
     this.client = null;
-    this.emit('status', this.getStatus());
+    this.connected = false;
+    if (wasConnected) this.emit('status', this.getStatus());
     this.scheduleReconnect();
   }
 
@@ -78,15 +96,13 @@ class RconService extends EventEmitter {
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.backoff = Math.min(this.backoff * 1.5, MAX_BACKOFF_MS);
-      void this.connect();
+      this.ensureConnected().catch(() => undefined);
     }, this.backoff);
   }
 
   async execute(command: string): Promise<RconResult> {
-    if (!this.client || !this.connected) {
-      throw new Error('RCON is not connected');
-    }
-    const response = await this.client.send(command);
+    const client = await this.ensureConnected();
+    const response = await client.send(command);
     return { command, response, timestamp: Date.now() };
   }
 

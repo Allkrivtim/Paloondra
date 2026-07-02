@@ -9,9 +9,15 @@ import {
   YAxis,
 } from 'recharts';
 import { api } from '../../api/client';
+import { getErrorMessage } from '../../api/errors';
 import { useSocket } from '../../hooks/useSocket';
+import { useToast } from '../../context/ToastContext';
+import { useDialog } from '../../context/DialogContext';
 import { ConsoleLine, MetricsSample, ScriptName, ServerStatus } from '../../types';
 import StatCard from '../common/StatCard';
+import Spinner from '../common/Spinner';
+
+const ACTION_LABELS: Record<ScriptName, string> = { start: 'Start', stop: 'Stop', restart: 'Restart' };
 
 const STATUS_POLL_MS = 5000;
 
@@ -20,7 +26,10 @@ function formatTime(ts: number) {
 }
 
 export default function Dashboard() {
+  const toast = useToast();
+  const dialog = useDialog();
   const [status, setStatus] = useState<ServerStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
   const [samples, setSamples] = useState<MetricsSample[]>([]);
   const [logLines, setLogLines] = useState<ConsoleLine[]>([]);
   const [busyAction, setBusyAction] = useState<ScriptName | null>(null);
@@ -34,6 +43,8 @@ export default function Dashboard() {
         if (!cancelled) setStatus(res.data);
       } catch {
         if (!cancelled) setStatus({ online: false, rconConnected: false, lastChecked: Date.now() });
+      } finally {
+        if (!cancelled) setStatusLoading(false);
       }
     }
     poll();
@@ -61,9 +72,24 @@ export default function Dashboard() {
   }, [logLines]);
 
   async function runAction(action: ScriptName) {
+    if (action === 'stop' || action === 'restart') {
+      const confirmed = await dialog.confirm({
+        title: `${ACTION_LABELS[action]} the server?`,
+        message:
+          action === 'stop'
+            ? 'This disconnects any players currently online.'
+            : 'This briefly disconnects any players currently online.',
+        confirmLabel: ACTION_LABELS[action],
+        danger: true,
+      });
+      if (!confirmed) return;
+    }
+
     setBusyAction(action);
     try {
       await api.post(`/server/${action}`);
+    } catch (err) {
+      toast.error(getErrorMessage(err, `Failed to trigger ${action}`));
     } finally {
       setTimeout(() => setBusyAction(null), 1500);
     }
@@ -82,16 +108,24 @@ export default function Dashboard() {
     <div className="flex flex-col gap-6 p-4 sm:p-6">
       <section className="flex flex-col gap-4 rounded-xl border border-panel-border bg-panel-surface p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span
-            className={`h-3 w-3 rounded-full ${
-              status?.online ? 'bg-panel-accent shadow-[0_0_8px_2px_rgba(74,222,128,0.6)]' : 'bg-panel-danger'
-            }`}
-          />
+          {statusLoading ? (
+            <Spinner />
+          ) : (
+            <span
+              className={`h-3 w-3 rounded-full ${
+                status?.online ? 'bg-panel-accent shadow-[0_0_8px_2px_rgba(74,222,128,0.6)]' : 'bg-panel-danger'
+              }`}
+            />
+          )}
           <div>
             <div className="text-sm font-semibold text-panel-text">
-              Server is {status?.online ? 'Online' : 'Offline'}
+              {statusLoading ? 'Checking status...' : `Server is ${status?.online ? 'Online' : 'Offline'}`}
             </div>
-            <div className="text-xs text-panel-muted">RCON: {status?.rconConnected ? 'connected' : 'disconnected'}</div>
+            {!statusLoading && (
+              <div className="text-xs text-panel-muted">
+                RCON: {status?.rconConnected ? 'connected' : 'disconnected'}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
@@ -138,8 +172,9 @@ export default function Dashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-panel-border bg-panel-surface p-4">
+        <div className="relative rounded-xl border border-panel-border bg-panel-surface p-4">
           <h2 className="mb-3 text-sm font-semibold text-panel-text">Players Online</h2>
+          {samples.length === 0 && <ChartEmptyState />}
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a2f3d" />
@@ -151,8 +186,9 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="rounded-xl border border-panel-border bg-panel-surface p-4">
+        <div className="relative rounded-xl border border-panel-border bg-panel-surface p-4">
           <h2 className="mb-3 text-sm font-semibold text-panel-text">Host Resource Usage (%)</h2>
+          {samples.length === 0 && <ChartEmptyState />}
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a2f3d" />
@@ -190,6 +226,14 @@ export default function Dashboard() {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function ChartEmptyState() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-xs text-panel-muted">
+      Waiting for the first metrics sample...
     </div>
   );
 }

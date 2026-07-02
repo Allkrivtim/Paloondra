@@ -9,7 +9,7 @@ import metricsRoutes from './routes/metrics.routes';
 import { setupWebSockets } from './ws';
 import { rconService } from './services/rcon.service';
 import { sshService } from './services/ssh.service';
-import { sftpService } from './services/sftp.service';
+import { fileManagerService } from './services/fileManager.service';
 import { metricsService } from './services/metrics.service';
 
 const app = express();
@@ -34,7 +34,7 @@ const server = http.createServer(app);
 setupWebSockets(server);
 
 server.listen(env.port, () => {
-  console.log(`Minecraft admin panel backend listening on port ${env.port}`);
+  console.log(`Paloondra backend listening on port ${env.port}`);
 });
 
 // Persistent, pre-configured connections - established once at startup from
@@ -42,7 +42,7 @@ server.listen(env.port, () => {
 // this single target server.
 rconService.start();
 sshService.start();
-sftpService.start();
+fileManagerService.start();
 metricsService.start();
 
 function shutdown() {

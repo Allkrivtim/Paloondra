@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
+import { getErrorMessage } from '../../api/errors';
+import Spinner from '../common/Spinner';
 import { monacoLanguageFor } from './format';
 
 interface Props {
@@ -21,8 +23,8 @@ export default function FileEditor({ path, initialContent, onClose, onSave }: Pr
     try {
       await onSave(content);
       setDirty(false);
-    } catch (err: any) {
-      setError(err?.response?.data?.error ?? 'Failed to save file');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to save file'));
     } finally {
       setSaving(false);
     }
@@ -41,8 +43,9 @@ export default function FileEditor({ path, initialContent, onClose, onSave }: Pr
             <button
               onClick={handleSave}
               disabled={saving || !dirty}
-              className="rounded-lg bg-panel-accent2 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg bg-panel-accent2 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
             >
+              {saving && <Spinner className="h-3 w-3 text-black" />}
               {saving ? 'Saving...' : 'Save'}
             </button>
             <button
