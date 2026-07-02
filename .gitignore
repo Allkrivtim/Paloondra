@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Env files (contain real credentials - never commit)
+.env
+.env.local
+*.env
+!.env.example
+
+# Build output
+backend/dist/
+frontend/dist/
+
+# User's real start/stop/restart/backup scripts - only the .example
+# templates in scripts/ are meant to be committed.
+scripts/*.sh
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor/OS
+.DS_Store
+.vscode/
+.idea/
+*.swp

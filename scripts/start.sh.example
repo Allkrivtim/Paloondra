@@ -1,0 +1,18 @@
+#!/bin/sh
+# Example START_SCRIPT - copy to start.sh, remove this comment block, and
+# adapt to how you actually run your server. This example assumes the
+# server is launched inside a detached `screen` session named "mc" from a
+# run.sh in the server directory.
+set -e
+
+SERVER_DIR="/opt/minecraft/server"
+SESSION="mc"
+
+if screen -list | grep -q "\.${SESSION}[[:space:]]"; then
+  echo "Server session '$SESSION' is already running."
+  exit 0
+fi
+
+cd "$SERVER_DIR"
+screen -dmS "$SESSION" ./run.sh
+echo "Started '$SESSION' in $SERVER_DIR"

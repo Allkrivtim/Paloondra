@@ -1,0 +1,24 @@
+#!/bin/sh
+# Example STOP_SCRIPT - copy to stop.sh and adapt. Sends "stop" to the same
+# screen session start.sh.example creates, then waits for it to exit.
+set -e
+
+SESSION="mc"
+
+if ! screen -list | grep -q "\.${SESSION}[[:space:]]"; then
+  echo "Server session '$SESSION' is not running."
+  exit 0
+fi
+
+screen -S "$SESSION" -p 0 -X stuff "stop$(printf '\r')"
+
+for i in $(seq 1 30); do
+  if ! screen -list | grep -q "\.${SESSION}[[:space:]]"; then
+    echo "Server stopped."
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "Server did not stop within 30s" >&2
+exit 1

@@ -1,0 +1,44 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    volumes:
+      # backend/.env is bind-mounted (not loaded via `env_file:`) on purpose:
+      # Compose's env_file parsing treats $VAR/${VAR} as interpolation and
+      # would silently mangle bcrypt hashes in USERS (they contain literal
+      # $ characters). Mounting the file lets the app's own dotenv loader
+      # read it as-is, exactly like running it outside Docker.
+      - ./backend/.env:/app/.env:ro
+      # Your start/stop/restart/backup .sh scripts, read from the host path
+      # in SCRIPTS_DIR (set in the repo-root .env). START_SCRIPT/STOP_SCRIPT/
+      # RESTART_SCRIPT in backend/.env must point at /scripts/<name>.sh -
+      # that's this mount's path inside the container, not the host path.
+      - ${SCRIPTS_DIR:-./scripts}:/scripts
+    extra_hosts:
+      # Lets RCON_HOST/SSH_HOST in backend/.env be "host.docker.internal"
+      # when the Minecraft server runs on the same physical machine as
+      # Docker - 127.0.0.1 inside this container is the container itself,
+      # not the Docker host, so that value would otherwise be unreachable.
+      - "host.docker.internal:host-gateway"
+    networks:
+      - paloondra
+    # No ports published - only the frontend's nginx reaches this, over the
+    # internal network, by proxying /api and /ws to it.
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - paloondra
+
+networks:
+  paloondra:
+    driver: bridge
