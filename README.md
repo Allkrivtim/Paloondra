@@ -28,8 +28,9 @@ the short version, skip to [Quick start](#quick-start).
 5. [Enabling sudo mode for the file manager](#enabling-sudo-mode-for-the-file-manager)
 6. [Running in production](#running-in-production)
 7. [Running with systemd](#running-with-systemd)
-8. [Development mode](#development-mode)
-9. [Troubleshooting](#troubleshooting)
+8. [Docker](#docker)
+9. [Development mode](#development-mode)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -387,6 +388,146 @@ runs as its own service — no extra unit needed there.
 
 ---
 
+## Docker
+
+An alternative to the manual build/systemd setup above: two containers
+(backend + an nginx that serves the built frontend and reverse-proxies the
+API/WebSockets), started with `docker compose up`.
+
+### Prerequisites
+
+- Docker Engine with the `docker compose` plugin (Docker Desktop includes
+  it; on Linux, `docker compose version` should print something without
+  needing a separate `docker-compose` binary).
+
+### 1. Fill in the two `.env` files
+
+There are two, for two different things:
+
+- **`backend/.env`** — the app's own runtime config, exactly as described
+  in [Every `.env` variable, explained](#every-env-variable-explained)
+  above. Copy it and fill it in the same way you would for a non-Docker
+  install:
+  ```bash
+  cp backend/.env.example backend/.env
+  ```
+  Two values need Docker-specific attention — see steps 2 and 3 below
+  before you consider this file done.
+
+- **`.env`** (repo root) — settings `docker-compose.yml` itself needs
+  (which host directory to mount for your scripts, and what URL the panel
+  will be reached at):
+  ```bash
+  cp .env.example .env
+  ```
+
+### 2. Point the script paths at the container mount
+
+`docker-compose.yml` bind-mounts a host directory into the backend
+container at `/scripts`. By default that host directory is `./scripts` in
+the repo (see [scripts/README.md](scripts/README.md) for copy-and-adapt
+`.example` templates); change `SCRIPTS_DIR` in the root `.env` if you'd
+rather point it somewhere else on the host.
+
+Either way, **`START_SCRIPT`/`STOP_SCRIPT`/`RESTART_SCRIPT` in
+`backend/.env` must use the container path**, not wherever the scripts
+actually live on the host:
+
+```
+START_SCRIPT=/scripts/start.sh
+STOP_SCRIPT=/scripts/stop.sh
+RESTART_SCRIPT=/scripts/restart.sh
+```
+
+Make sure the scripts are executable on the host before starting the stack
+(the bind mount preserves permissions): `chmod +x scripts/*.sh`. There's no
+`BACKUP_SCRIPT` variable — the panel doesn't call one itself — but a
+`backup.sh` in the same directory is reachable from inside the container
+too, e.g. `docker compose exec backend sh /scripts/backup.sh` from a host
+cron job.
+
+### 3. Point RCON/SSH at a reachable host
+
+`127.0.0.1` inside the backend container is the *container itself*, not
+your Docker host — if the Minecraft server runs on the same physical
+machine as Docker, using `127.0.0.1` in `backend/.env` (the default in
+`.env.example`, meant for non-Docker installs) will fail to connect. Use
+the special hostname `host.docker.internal` instead, which
+`docker-compose.yml` already maps to the Docker host for you:
+
+```
+RCON_HOST=host.docker.internal
+SSH_HOST=host.docker.internal
+```
+
+If the Minecraft server runs on a *different* machine, use its real
+reachable address instead — that case needs no special handling.
+
+### 4. Set `VITE_API_BASE_URL` to how you'll reach the panel
+
+In the root `.env`, set `VITE_API_BASE_URL` to the URL you'll actually
+open in a browser — e.g. `http://192.168.1.50` for a LAN box, or
+`http://localhost` if you're only testing on the same machine. This gets
+baked into the frontend's JavaScript at build time, so if you change it
+later you need to rebuild: `docker compose build frontend`.
+
+### 5. Build and start
+
+```bash
+docker compose up -d --build
+```
+
+Open `http://<the address from step 4>/` — nginx listens on port 80,
+which is the only port this stack publishes to the host (the backend is
+only reachable from the frontend container, over Docker's internal
+network).
+
+Useful commands:
+
+```bash
+docker compose logs -f backend    # backend logs (script output, connection status, errors)
+docker compose logs -f frontend   # nginx access/error logs
+docker compose restart backend    # pick up backend/.env changes (no rebuild needed)
+docker compose down               # stop and remove both containers
+```
+
+Changes to `backend/.env` take effect on `docker compose restart backend`
+(it's bind-mounted, not baked into the image). Changes to the root `.env`'s
+`VITE_API_BASE_URL` need `docker compose up -d --build` again, since Vite
+inlines it at build time.
+
+### HTTPS
+
+This setup is plain HTTP on port 80, with no TLS — fine for trying it out
+on a LAN, not fine for exposing it on the public internet, since JWTs and
+SSH/RCON traffic would travel in plaintext. For real production use, put a
+TLS-terminating reverse proxy (Caddy, Traefik, or nginx with certbot) in
+front of port 80, or extend `frontend/nginx.conf` to listen on 443 with a
+certificate and add a container/host-level way to obtain one. That's
+deliberately left out here to keep this stack's first run as simple as
+possible.
+
+### Implementation notes
+
+- `backend/.env` is bind-mounted into the container (`/app/.env`) rather
+  than loaded via Compose's `env_file:`. This is intentional: Compose's
+  `env_file:` interpolates `$VAR`/`${VAR}` in the file, which would
+  silently corrupt bcrypt hashes in `USERS` (they contain literal `$`
+  characters) unless every `$` were doubled to `$$`. Mounting the file
+  instead lets the app's own dotenv loader read it exactly as written, so
+  hashes from `npm run hash` work unmodified — the same file, unchanged,
+  works both with and without Docker.
+- The backend image is multi-stage: dependencies (including the native
+  build toolchain `ssh2`'s optional `cpu-features` addon needs) are
+  installed once, `tsc` runs in a build stage, and the runtime stage copies
+  the compiled `dist/` plus a `node_modules` pruned of devDependencies —
+  no compiler or build tools ship in the final image.
+- The frontend image is also multi-stage: `vite build` runs in a Node
+  stage, and only the static output is copied into a plain `nginx:alpine`
+  image alongside `frontend/nginx.conf`.
+
+---
+
 ## Development mode
 
 ```bash
@@ -476,7 +617,22 @@ encrypted with a passphrase you haven't set in `SSH_KEY_PASSPHRASE`.
 `CORS_ORIGIN` in the backend's `.env` must exactly match the origin the
 frontend is served from (scheme, host, and port). `http://localhost:5173`
 and `http://127.0.0.1:5173` are different origins as far as CORS is
-concerned.
+concerned. (Not applicable to the Docker setup - nginx proxies `/api` on
+the same origin the page was loaded from, so there's no cross-origin
+request to begin with.)
+
+**Docker: RCON/SSH show "connect ECONNREFUSED 127.0.0.1:..."**
+`127.0.0.1` inside the backend container refers to the container itself.
+If the Minecraft server is on the same physical machine as Docker, set
+`RCON_HOST`/`SSH_HOST` in `backend/.env` to `host.docker.internal` instead
+(see [Docker](#docker), step 3) and `docker compose restart backend`.
+
+**Docker: Start/Stop/Restart do nothing**
+Check `START_SCRIPT`/`STOP_SCRIPT`/`RESTART_SCRIPT` in `backend/.env` point
+at `/scripts/...` (the container path), not the host path, and that the
+files exist and are executable on the host (`chmod +x scripts/*.sh`) - see
+[Docker](#docker), step 2. `docker compose logs backend` will show a
+"Failed to launch script" line if the path is wrong.
 
 ---
 
@@ -485,6 +641,9 @@ concerned.
 ```
 backend/    Express + TypeScript API and WebSocket server
 frontend/   React + Vite + TypeScript + Tailwind UI
+scripts/    Example start/stop/restart/backup .sh templates (Docker mount target)
+docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
+            The Docker setup - see the Docker section above
 ```
 
 ## Tabs

@@ -11,6 +11,10 @@ node_modules/
 backend/dist/
 frontend/dist/
 
+# User's real start/stop/restart/backup scripts - only the .example
+# templates in scripts/ are meant to be committed.
+scripts/*.sh
+
 # Logs
 *.log
 npm-debug.log*
