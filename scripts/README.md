@@ -1,31 +1,43 @@
 # scripts/
 
-This directory is a placeholder for your **own** start/stop/restart/backup
-`.sh` scripts. It's not meant to ship real scripts in version control - the
-`.example` files here are just a starting point. Copy one, drop the
-`.example` suffix, and edit it for how you actually run your Minecraft
-server (`screen`, `tmux`, `systemctl`, Docker, whatever).
+This directory holds example start/stop/restart/backup `.sh` templates.
+They're not meant to run from here - Paloondra runs your scripts **on the
+target Minecraft server**, over SSH, not on whatever machine runs the
+backend (container or otherwise). Copy the `.example` files you want, drop
+the `.example` suffix, edit them for how you actually run your server
+(`screen`, `tmux`, `systemctl`, Docker, whatever), and **upload them to
+your server** into one directory.
 
-## How this maps into Docker
+## How this maps into `backend/.env`
 
-`docker-compose.yml` mounts this directory (path controlled by `SCRIPTS_DIR`
-in the repo-root `.env`) into the backend container at `/scripts`. Point
-`START_SCRIPT` / `STOP_SCRIPT` / `RESTART_SCRIPT` in `backend/.env` at the
-**container** path, not the host path:
+Whatever directory you put your scripts in on the server is `SCRIPTS_DIR`.
+Each of `START_SCRIPT` / `STOP_SCRIPT` / `RESTART_SCRIPT` / `BACKUP_SCRIPT`
+is then just the filename inside it - Paloondra runs them as:
 
 ```
-START_SCRIPT=/scripts/start.sh
-STOP_SCRIPT=/scripts/stop.sh
-RESTART_SCRIPT=/scripts/restart.sh
+cd <SCRIPTS_DIR> && ./<filename>
 ```
 
-There's no `BACKUP_SCRIPT` variable - the panel doesn't call a backup script
-itself, but `backup.sh` sitting in this same directory is reachable from
-inside the container too (e.g. for a host cron job that runs it via
-`docker compose exec backend sh /scripts/backup.sh`, or for `start.sh`/
-`stop.sh` to call it directly).
+over the same SSH connection the terminal tab and file manager use (see
+`SSH_HOST`/`SSH_USER`/etc. in `backend/.env`). For example:
 
-See the main [README](../README.md#docker) for the full Docker setup guide.
+```
+SCRIPTS_DIR=/home/minecraft/scripts
+START_SCRIPT=start.sh
+STOP_SCRIPT=stop.sh
+RESTART_SCRIPT=restart.sh
+BACKUP_SCRIPT=backup.sh
+```
 
-Make sure your real scripts are executable on the host before starting the
-stack: `chmod +x scripts/*.sh`.
+`BACKUP_SCRIPT` isn't wired to a Dashboard button (there isn't one), but
+it's runnable the same way as the other three if you want to trigger it
+from your own tooling (`POST /api/server/backup`).
+
+Make sure the scripts are executable **on the server**:
+`chmod +x /home/minecraft/scripts/*.sh` (or wherever you put them) - not on
+the machine running the Paloondra backend, if that's a different one.
+
+See the main [README](../README.md#every-env-variable-explained) for the
+full variable reference, and the [Docker section](../README.md#docker) if
+you're running the backend in a container - no volume mount is needed for
+scripts there, since they live entirely on the remote server.

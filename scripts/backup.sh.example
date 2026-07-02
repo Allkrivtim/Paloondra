@@ -1,8 +1,8 @@
 #!/bin/sh
-# Example backup script - not wired to any panel button (there isn't one),
-# but reachable from inside the backend container at /scripts/backup.sh
-# once you copy this to backup.sh, for a host cron job or manual use:
-#   docker compose exec backend sh /scripts/backup.sh
+# Example backup script - not wired to any Dashboard button, but runnable
+# the same way as start/stop/restart once you copy this to backup.sh in
+# SCRIPTS_DIR on your server: POST /api/server/backup, or just run it by
+# hand over SSH.
 set -e
 
 SERVER_DIR="/opt/minecraft/server"

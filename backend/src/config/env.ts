@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import path from 'path';
 
 dotenv.config();
 
@@ -88,11 +87,6 @@ function parseUsers(raw: string): AppUserConfig[] {
   return users;
 }
 
-function resolveScriptPath(name: string): string {
-  const raw = required(name);
-  return raw ? path.resolve(raw) : '';
-}
-
 const sshPassword = process.env.SSH_PASSWORD || undefined;
 const sshKeyPath = process.env.SSH_KEY_PATH || undefined;
 
@@ -104,10 +98,16 @@ export const env = {
   jwtExpiresIn: optional('JWT_EXPIRES_IN', '12h'),
   users: parseUsers(required('USERS')),
 
+  // Scripts live on the target server (not the machine running this
+  // backend) and run over the same SSH connection as the terminal/SFTP,
+  // as `cd <scriptsDir> && ./<filename>` - see ssh.service.ts /
+  // scripts.service.ts.
+  scriptsDir: required('SCRIPTS_DIR'),
   scripts: {
-    start: resolveScriptPath('START_SCRIPT'),
-    stop: resolveScriptPath('STOP_SCRIPT'),
-    restart: resolveScriptPath('RESTART_SCRIPT'),
+    start: optional('START_SCRIPT', 'start.sh'),
+    stop: optional('STOP_SCRIPT', 'stop.sh'),
+    restart: optional('RESTART_SCRIPT', 'restart.sh'),
+    backup: optional('BACKUP_SCRIPT', 'backup.sh'),
   },
 
   rcon: {

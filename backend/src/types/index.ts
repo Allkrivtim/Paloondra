@@ -1,4 +1,4 @@
-export type ScriptName = 'start' | 'stop' | 'restart';
+export type ScriptName = 'start' | 'stop' | 'restart' | 'backup';
 
 export interface ConsoleLine {
   stream: 'stdout' | 'stderr' | 'system';

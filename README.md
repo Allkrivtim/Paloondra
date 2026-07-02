@@ -4,7 +4,7 @@ A web-based admin panel for a Minecraft server. Paloondra **never touches the
 server process or its files directly** — every action goes through one of
 four external channels:
 
-- **Shell scripts** (`START_SCRIPT` / `STOP_SCRIPT` / `RESTART_SCRIPT`), run via `child_process`
+- **Shell scripts** (`START_SCRIPT` / `STOP_SCRIPT` / `RESTART_SCRIPT` / `BACKUP_SCRIPT`), run over the same SSH connection as the terminal, from inside `SCRIPTS_DIR` on the target server
 - **RCON** (`rcon-client`) for in-game commands and the player list
 - **SSH** (`ssh2`) for the interactive terminal and host metrics (`top`/`free`/`df`)
 - **SFTP** (`ssh2`'s SFTP subsystem, or `sudo` over SSH exec) for the file manager
@@ -52,12 +52,13 @@ the short version, skip to [Quick start](#quick-start).
 - **SSH access** to the host running the Minecraft server, either a
   password or a private key, for a user that can read (and ideally write)
   the server's files.
-- Three shell scripts on the machine running the Paloondra **backend**
-  (typically the same host as the Minecraft server) that start, stop, and
-  restart your server however you normally do it — `screen`, `tmux`,
-  `systemctl`, a Docker command, whatever you already use. Paloondra just
-  runs `sh <path-to-script>` and streams stdout/stderr; it has no opinion
-  on what's inside.
+- Start/stop/restart (and optionally backup) shell scripts **on that same
+  server**, in one directory, that do whatever you normally do to manage
+  it — `screen`, `tmux`, `systemctl`, a Docker command, whatever you
+  already use. Paloondra runs them over SSH as `cd <SCRIPTS_DIR> &&
+  ./<script>` and streams stdout/stderr back to the Dashboard; it has no
+  opinion on what's inside them. They need to be executable
+  (`chmod +x *.sh` in that directory).
 
 ## Quick start
 
@@ -108,18 +109,6 @@ There is no separate config for the frontend beyond the API URL (see
 | `JWT_EXPIRES_IN` | `12h` | How long a login stays valid. Any [`ms`](https://github.com/vercel/ms) string (`30m`, `7d`, ...) or a number of seconds. |
 | `USERS` | `admin:$2b$10$...,mod:$2b$10$...` | Comma separated `username:bcrypt_hash` pairs. See [Creating users](#creating-users) below — there is no signup UI. |
 
-### Shell scripts
-
-| Variable | Example | Meaning |
-|---|---|---|
-| `START_SCRIPT` | `/opt/minecraft/start.sh` | Absolute path. Run via `sh <path>` when you click Start. |
-| `STOP_SCRIPT` | `/opt/minecraft/stop.sh` | Same, for Stop. |
-| `RESTART_SCRIPT` | `/opt/minecraft/restart.sh` | Same, for Restart. |
-
-These must be readable and executable by the OS user running the Paloondra
-backend process (`chmod +x` them). Output (stdout/stderr) streams live to
-the Dashboard tab.
-
 ### RCON
 
 | Variable | Example | Meaning |
@@ -141,6 +130,31 @@ the Dashboard tab.
 
 You need **either** `SSH_PASSWORD` or `SSH_KEY_PATH` — the backend refuses
 to start with neither set.
+
+### Shell scripts
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `SCRIPTS_DIR` | `/home/minecraft/scripts` | Absolute path **on the target server** (the SSH host above) containing your scripts. |
+| `START_SCRIPT` | `start.sh` | Filename inside `SCRIPTS_DIR`, run when you click Start. |
+| `STOP_SCRIPT` | `stop.sh` | Same, for Stop. |
+| `RESTART_SCRIPT` | `restart.sh` | Same, for Restart. |
+| `BACKUP_SCRIPT` | `backup.sh` | Same - not wired to a Dashboard button, but runnable the same way (`POST /api/server/backup`) if you want to trigger it from your own tooling. |
+
+These run over the **same SSH connection** as the terminal tab and file
+manager - not locally on whatever machine runs the Paloondra backend. Each
+one executes as:
+
+```
+cd <SCRIPTS_DIR> && ./<the filename>
+```
+
+so a script that assumes it's running from its own directory (relative
+paths inside it) keeps working exactly as if you'd `cd`'d there and run it
+by hand. They must be executable on the server: `chmod +x` everything in
+`SCRIPTS_DIR`. Output (stdout/stderr) streams live to the Dashboard tab;
+a non-zero exit code or an SSH-level failure (connection down, script
+missing) shows up there too instead of hanging.
 
 ### File manager (SFTP)
 
@@ -369,9 +383,11 @@ Notes:
 - `EnvironmentFile` reads `.env` directly — no need to duplicate the values
   in the unit file. Keep `.env` readable only by the `paloondra` user
   (`chmod 600 backend/.env`).
-- Create the `paloondra` user first (`useradd --system --home /opt/paloondra paloondra`),
-  make sure it owns `/opt/paloondra`, and that it can execute your
-  `START_SCRIPT`/`STOP_SCRIPT`/`RESTART_SCRIPT`.
+- Create the `paloondra` user first (`useradd --system --home /opt/paloondra paloondra`)
+  and make sure it owns `/opt/paloondra`. It doesn't need local execute
+  permissions on your start/stop/restart/backup scripts - those run over
+  SSH on the target server, not on this machine (see
+  [Shell scripts](#every-env-variable-explained)).
 - `npm run build` first so `dist/index.js` exists.
 
 Enable and start it:
@@ -411,42 +427,20 @@ There are two, for two different things:
   ```bash
   cp backend/.env.example backend/.env
   ```
-  Two values need Docker-specific attention — see steps 2 and 3 below
-  before you consider this file done.
+  One value needs Docker-specific attention — see step 2 below before you
+  consider this file done. Your start/stop/restart/backup scripts (`SCRIPTS_DIR`
+  and friends) need **no Docker-specific changes at all**: they run over
+  SSH on the target server exactly as described in
+  [Shell scripts](#every-env-variable-explained), regardless of whether the
+  backend itself is containerized.
 
-- **`.env`** (repo root) — settings `docker-compose.yml` itself needs
-  (which host directory to mount for your scripts, and what URL the panel
-  will be reached at):
+- **`.env`** (repo root) — the one setting `docker-compose.yml` itself
+  needs (what URL the panel will be reached at):
   ```bash
   cp .env.example .env
   ```
 
-### 2. Point the script paths at the container mount
-
-`docker-compose.yml` bind-mounts a host directory into the backend
-container at `/scripts`. By default that host directory is `./scripts` in
-the repo (see [scripts/README.md](scripts/README.md) for copy-and-adapt
-`.example` templates); change `SCRIPTS_DIR` in the root `.env` if you'd
-rather point it somewhere else on the host.
-
-Either way, **`START_SCRIPT`/`STOP_SCRIPT`/`RESTART_SCRIPT` in
-`backend/.env` must use the container path**, not wherever the scripts
-actually live on the host:
-
-```
-START_SCRIPT=/scripts/start.sh
-STOP_SCRIPT=/scripts/stop.sh
-RESTART_SCRIPT=/scripts/restart.sh
-```
-
-Make sure the scripts are executable on the host before starting the stack
-(the bind mount preserves permissions): `chmod +x scripts/*.sh`. There's no
-`BACKUP_SCRIPT` variable — the panel doesn't call one itself — but a
-`backup.sh` in the same directory is reachable from inside the container
-too, e.g. `docker compose exec backend sh /scripts/backup.sh` from a host
-cron job.
-
-### 3. Point RCON/SSH at a reachable host
+### 2. Point RCON/SSH at a reachable host
 
 `127.0.0.1` inside the backend container is the *container itself*, not
 your Docker host — if the Minecraft server runs on the same physical
@@ -460,10 +454,13 @@ RCON_HOST=host.docker.internal
 SSH_HOST=host.docker.internal
 ```
 
+This same `SSH_HOST` is what the start/stop/restart/backup scripts run
+against too, so fixing it here covers both.
+
 If the Minecraft server runs on a *different* machine, use its real
 reachable address instead — that case needs no special handling.
 
-### 4. Set `VITE_API_BASE_URL` to how you'll reach the panel
+### 3. Set `VITE_API_BASE_URL` to how you'll reach the panel
 
 In the root `.env`, set `VITE_API_BASE_URL` to the URL you'll actually
 open in a browser — e.g. `http://192.168.1.50` for a LAN box, or
@@ -471,13 +468,13 @@ open in a browser — e.g. `http://192.168.1.50` for a LAN box, or
 baked into the frontend's JavaScript at build time, so if you change it
 later you need to rebuild: `docker compose build frontend`.
 
-### 5. Build and start
+### 4. Build and start
 
 ```bash
 docker compose up -d --build
 ```
 
-Open `http://<the address from step 4>/` — nginx listens on port 80,
+Open `http://<the address from step 3>/` — nginx listens on port 80,
 which is the only port this stack publishes to the host (the backend is
 only reachable from the frontend container, over Docker's internal
 network).
@@ -599,12 +596,23 @@ encrypted with a passphrase you haven't set in `SSH_KEY_PASSPHRASE`.
   hanging — that means the `NOPASSWD` entry isn't matching. Re-check the
   username and paths.
 
-**Start/Stop/Restart buttons do nothing, or the Dashboard log stays empty**
-- Confirm the script paths in `.env` are correct and the files are
-  executable (`chmod +x`) by the OS user running the backend process.
-- Check the backend's own logs (`journalctl -u paloondra -f` if using
-  systemd, or the terminal running `npm run dev`) for a "Failed to launch
-  script" line.
+**Start/Stop/Restart/Backup show "Failed to run ... over SSH" in the Dashboard log**
+The script action couldn't even reach the SSH connection - same causes and
+fixes as the SSH terminal connection errors above (wrong `SSH_HOST`/
+`SSH_PORT`, bad credentials, network/firewall). The script itself never ran.
+
+**Start/Stop/Restart/Backup run but immediately show a non-zero exit code**
+- Confirm `SCRIPTS_DIR` in `backend/.env` is the absolute path **on the
+  target server** (the SSH host), not on whatever machine runs the
+  Paloondra backend - these are usually the same host, but don't have to
+  be.
+- Confirm `START_SCRIPT`/`STOP_SCRIPT`/`RESTART_SCRIPT`/`BACKUP_SCRIPT` are
+  just filenames (`start.sh`), not paths, and that those files actually
+  exist inside `SCRIPTS_DIR` on the server.
+- Confirm they're executable **on the server**: `chmod +x` everything in
+  `SCRIPTS_DIR` there (not on the machine running the backend, if that's a
+  different one). A "Permission denied" line in the Dashboard log almost
+  always means this.
 
 **Login fails with "Invalid username or password" even though you're sure it's right**
 - Make sure you copied the *entire* bcrypt hash from `npm run hash` into
@@ -625,14 +633,9 @@ request to begin with.)
 `127.0.0.1` inside the backend container refers to the container itself.
 If the Minecraft server is on the same physical machine as Docker, set
 `RCON_HOST`/`SSH_HOST` in `backend/.env` to `host.docker.internal` instead
-(see [Docker](#docker), step 3) and `docker compose restart backend`.
-
-**Docker: Start/Stop/Restart do nothing**
-Check `START_SCRIPT`/`STOP_SCRIPT`/`RESTART_SCRIPT` in `backend/.env` point
-at `/scripts/...` (the container path), not the host path, and that the
-files exist and are executable on the host (`chmod +x scripts/*.sh`) - see
-[Docker](#docker), step 2. `docker compose logs backend` will show a
-"Failed to launch script" line if the path is wrong.
+(see [Docker](#docker), step 2) and `docker compose restart backend`. This
+affects the start/stop/restart/backup scripts too, since they run over the
+same SSH connection.
 
 ---
 
@@ -641,7 +644,8 @@ files exist and are executable on the host (`chmod +x scripts/*.sh`) - see
 ```
 backend/    Express + TypeScript API and WebSocket server
 frontend/   React + Vite + TypeScript + Tailwind UI
-scripts/    Example start/stop/restart/backup .sh templates (Docker mount target)
+scripts/    Example start/stop/restart/backup .sh templates - copy these to
+            SCRIPTS_DIR on your target server, they don't run from here
 docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
             The Docker setup - see the Docker section above
 ```
@@ -650,7 +654,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 
 | Tab | What it does |
 |---|---|
-| **Dashboard** | Online/offline status, Start/Stop/Restart buttons (run the configured scripts, output streams live), player count/TPS/host CPU/RAM/disk charts |
+| **Dashboard** | Online/offline status, Start/Stop/Restart buttons (run the configured scripts over SSH on the target server, output streams live), player count/TPS/host CPU/RAM/disk charts |
 | **RCON Console** | Command input with history (↑/↓), live output log, auto-reconnect |
 | **SSH Terminal** | Full interactive shell (xterm.js + ssh2 PTY), resizable, auto-reconnects a fresh session if the connection drops |
 | **File Manager** | SFTP (or sudo-mode) browser: navigate, upload/download, rename, delete, mkdir, drag & drop (upload from OS, move between folders), built-in Monaco editor for text files |
@@ -669,13 +673,14 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   stored token and bounces to the login screen, which also tears down any
   open WebSockets so they don't retry forever with a token that will never
   become valid again.
-- **Reconnection**: RCON, the shared SSH connection (metrics + sudo-mode
-  file ops), and the plain-SFTP connection each retry with exponential
-  backoff (2s → 30s) if dropped, and immediately attempt a fresh connection
-  on demand (e.g. the moment you send an RCON command or hit the file
-  manager) rather than waiting out a pending backoff timer. The SSH
-  terminal tab opens a dedicated connection per browser session and
-  reconnects automatically if it drops.
+- **Reconnection**: RCON, the shared SSH connection (metrics, sudo-mode
+  file ops, and the start/stop/restart/backup scripts), and the plain-SFTP
+  connection each retry with exponential backoff (2s → 30s) if dropped, and
+  immediately attempt a fresh connection on demand (e.g. the moment you
+  send an RCON command, click Start, or hit the file manager) rather than
+  waiting out a pending backoff timer. The SSH terminal tab opens a
+  dedicated connection per browser session and reconnects automatically if
+  it drops.
 - The `dev` known-vulnerability scan (`npm audit`) flags esbuild/vite's
   **dev server** (not the production build) for a request-forwarding issue
   fixed only in vite 8 — a breaking upgrade out of scope here. Don't expose

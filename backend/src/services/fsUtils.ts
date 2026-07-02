@@ -1,4 +1,8 @@
-/** Shared helpers used by both the plain-SFTP and sudo-exec file services. */
+/**
+ * Shared helpers used by the plain-SFTP and sudo-exec file services, and by
+ * scripts.service.ts for building the `cd <dir> && ./<script>` commands it
+ * runs over SSH.
+ */
 
 export function modeToPermissions(mode: number): string {
   const perms = mode & 0o777;
