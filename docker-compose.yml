@@ -10,6 +10,11 @@ services:
       # $ characters). Mounting the file lets the app's own dotenv loader
       # read it as-is, exactly like running it outside Docker.
       - ./backend/.env:/app/.env:ro
+      # Persists the scheduler's tasks and the audit log (DATA_DIR in
+      # backend/.env, default ./data - resolved relative to /app, i.e. this
+      # volume) across container recreation. This is local to the backend
+      # container/host, unrelated to the target Minecraft server.
+      - paloondra-data:/app/data
     extra_hosts:
       # Lets RCON_HOST/SSH_HOST in backend/.env be "host.docker.internal"
       # when the Minecraft server runs on the same physical machine as
@@ -37,3 +42,6 @@ services:
 networks:
   paloondra:
     driver: bridge
+
+volumes:
+  paloondra-data:

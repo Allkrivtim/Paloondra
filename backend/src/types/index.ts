@@ -50,8 +50,73 @@ export interface FileManagerService {
   readTextFile(filePath: string, maxSize: number): Promise<string>;
   writeTextFile(filePath: string, content: string): Promise<void>;
   writeBuffer(filePath: string, data: Buffer): Promise<void>;
+  /** Reads a whole file into memory as raw bytes (jars, other binaries) - unlike readTextFile, never rejects binary content. */
+  readBuffer(filePath: string, maxSize?: number): Promise<Buffer>;
   /** Streams a file's contents without buffering it fully in memory (used for downloads). */
   createReadStream(filePath: string): Promise<NodeJS.ReadableStream>;
   /** Resolves the SSH login user's home directory - used as the SFTP fallback default path. */
   resolveHome(): Promise<string>;
+}
+
+// ---------------------------------------------------------------------------
+// Plugins
+// ---------------------------------------------------------------------------
+
+export interface PluginInfo {
+  /** Filename on disk, including .disabled suffix if present. */
+  filename: string;
+  path: string;
+  size: number;
+  modifiedAt: number;
+  enabled: boolean;
+  /** Parsed from plugin.yml inside the jar; null if unreadable/missing. */
+  name: string | null;
+  version: string | null;
+  author: string | null;
+  description: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Scheduled tasks
+// ---------------------------------------------------------------------------
+
+export type ScheduledTaskType = 'restart' | 'rcon';
+
+export interface ScheduledTask {
+  id: string;
+  name: string;
+  /** Standard 5-field cron expression, evaluated in the backend's local timezone. */
+  schedule: string;
+  type: ScheduledTaskType;
+  /** Required when type is 'rcon'; ignored for 'restart'. */
+  command: string | null;
+  enabled: boolean;
+  createdAt: number;
+  lastRunAt: number | null;
+  lastRunResult: string | null;
+}
+
+export type ScheduledTaskInput = Pick<ScheduledTask, 'name' | 'schedule' | 'type' | 'command' | 'enabled'>;
+
+// ---------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: number;
+  username: string;
+  action: string;
+  details: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Backups
+// ---------------------------------------------------------------------------
+
+export interface BackupInfo {
+  filename: string;
+  path: string;
+  size: number;
+  modifiedAt: number;
 }

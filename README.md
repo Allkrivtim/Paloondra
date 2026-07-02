@@ -2,12 +2,14 @@
 
 A web-based admin panel for a Minecraft server. Paloondra **never touches the
 server process or its files directly** — every action goes through one of
-four external channels:
+these external channels:
 
 - **Shell scripts** (`START_SCRIPT` / `STOP_SCRIPT` / `RESTART_SCRIPT` / `BACKUP_SCRIPT`), run over the same SSH connection as the terminal, from inside `SCRIPTS_DIR` on the target server
-- **RCON** (`rcon-client`) for in-game commands and the player list
+- **RCON** (`rcon-client`) for in-game commands, the player list, quick moderation actions, broadcasts, and scheduled RCON tasks
 - **SSH** (`ssh2`) for the interactive terminal and host metrics (`top`/`free`/`df`)
-- **SFTP** (`ssh2`'s SFTP subsystem, or `sudo` over SSH exec) for the file manager
+- **SFTP** (`ssh2`'s SFTP subsystem, or `sudo` over SSH exec) for the file manager, the plugins list, backups, and the server.properties editor
+- **node-cron** (backend-local) for scheduled restarts/RCON commands - nothing external, just a timer that calls the same RCON/scripts channels above
+- **The public Modrinth API** (`api.modrinth.com`) - the one exception to "only talks to your one configured server" - used only for the plugin store's search/browse/install, over plain HTTPS, no credentials involved
 
 All connection details (script paths, RCON, SSH/SFTP credentials) live
 **only** in the backend's `.env` file. There is no "add a server" UI — on
@@ -26,11 +28,16 @@ the short version, skip to [Quick start](#quick-start).
 3. [Every `.env` variable, explained](#every-env-variable-explained)
 4. [Creating users](#creating-users)
 5. [Enabling sudo mode for the file manager](#enabling-sudo-mode-for-the-file-manager)
-6. [Running in production](#running-in-production)
-7. [Running with systemd](#running-with-systemd)
-8. [Docker](#docker)
-9. [Development mode](#development-mode)
-10. [Troubleshooting](#troubleshooting)
+6. [Plugins & the plugin store](#plugins--the-plugin-store)
+7. [Scheduled tasks](#scheduled-tasks)
+8. [Backups](#backups)
+9. [server.properties editor](#serverproperties-editor)
+10. [Audit log](#audit-log)
+11. [Running in production](#running-in-production)
+12. [Running with systemd](#running-with-systemd)
+13. [Docker](#docker)
+14. [Development mode](#development-mode)
+15. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -177,6 +184,45 @@ missing) shows up there too instead of hanging.
 |---|---|---|
 | `EDITOR_MAX_FILE_SIZE` | `2097152` (2 MiB) | The built-in file editor refuses to open anything larger than this, and refuses anything that looks binary regardless of size. |
 
+### Plugins
+
+All optional, like `SFTP_DEFAULT_PATH` above: leave one unset and the
+corresponding tab shows a clear "not configured" message instead of the
+backend refusing to start.
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `PLUGINS_DIR` | `/home/minecraft/server/plugins` | Absolute path to the server's `plugins/` directory, on the target server. Required for the Plugins tab. |
+| `PLUGIN_JAR_MAX_SIZE` | `104857600` (100 MiB) | Largest `.jar` the panel will upload, or read into memory to parse `plugin.yml` out of. |
+
+### Backups
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `BACKUPS_DIR` | `/home/minecraft/backups` | Absolute path, on the target server, to wherever `BACKUP_SCRIPT` writes its archives. Only used for listing/downloading/deleting them — triggering a backup still just runs `BACKUP_SCRIPT`. |
+
+### server.properties editor
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `SERVER_PROPERTIES_PATH` | `/home/minecraft/server/server.properties` | Absolute path to `server.properties`, on the target server. |
+
+### Plugin store config
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `MODRINTH_API_URL` | `https://api.modrinth.com/v2` | Base URL of the Modrinth API. No reason to change this unless you're pointing at a mirror/proxy. See [Plugins & the plugin store](#plugins--the-plugin-store) for how it's used. |
+
+### Local data storage
+
+Unlike every other path in this file, this one is **not** on the target
+server - it's local to whatever machine runs the Paloondra backend, with no
+SSH involved.
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `DATA_DIR` | `./data` | Where the scheduler's tasks and the audit log are persisted as small JSON files. In Docker this needs its own volume so it survives container recreation - already wired up in `docker-compose.yml`. |
+
 If anything required is missing or malformed, the backend prints every
 problem it found and exits immediately — it will not start half-configured.
 
@@ -291,6 +337,163 @@ SUDO_PATH=/usr/bin/sudo
 
 Restart the backend. Test it by opening the File Manager tab and browsing
 to a directory `SSH_USER` doesn't directly own.
+
+---
+
+## Plugins & the plugin store
+
+The Plugins tab has two sub-tabs: **Installed** (what's already in
+`PLUGINS_DIR`) and **Store** (search/browse/install from Modrinth).
+
+### Enable/disable convention
+
+There's no database tracking plugin state - Paloondra uses the same
+convention Bukkit/Spigot/Paper server owners already use by hand:
+**disabling a plugin renames it from `Foo.jar` to `Foo.jar.disabled`**.
+Re-enabling reverses the rename. This means:
+
+- Toggling a plugin in the UI is just an SFTP rename - instant, no server
+  interaction.
+- Anything already named `*.jar.disabled` in `PLUGINS_DIR` before you ever
+  open the panel shows up as disabled, correctly, with no extra setup.
+- The change only takes effect once the server actually restarts and
+  re-scans the plugins folder - which is why installing, deleting, or
+  toggling a plugin shows a "restart required" banner with a one-click
+  Restart button (runs `RESTART_SCRIPT`, same as the Dashboard's button).
+
+### Reading real plugin names
+
+For each `.jar`, Paloondra looks inside it (jars are zip files) for
+`plugin.yml` or `paper-plugin.yml`, parses the YAML, and shows the real
+`name`/`version`/`author`/`description` instead of just the filename. If
+neither file is present or parses cleanly (some jars are obfuscated or use
+non-standard build layouts), the panel falls back to showing the filename -
+this never blocks listing, installing, or managing the plugin, it's display
+only. Parsed metadata is cached per file (keyed by size + modified time) so
+re-opening the tab doesn't re-parse every jar.
+
+### Installing
+
+- **By URL**: paste a direct link to a `.jar`; the backend downloads it
+  (validating it's actually a zip by its magic bytes, not just trusting the
+  `.jar` extension) and uploads it to `PLUGINS_DIR` over SFTP. This accepts
+  *any* http(s) URL you give it - it's a deliberately open "fetch this file
+  for me" feature, so only use links you trust.
+- **By file**: drag a `.jar` onto the upload zone, or click to browse.
+  Streamed to the backend and then to `PLUGINS_DIR`, with a progress
+  indicator.
+- **From the Store**: see below.
+
+Both paths reject anything over `PLUGIN_JAR_MAX_SIZE` and anything that
+doesn't look like a real zip archive.
+
+### Plugin store (Modrinth)
+
+Search hits Modrinth's public API, filtered to `project_type:plugin`, with
+optional game version / loader / category filters. Clicking a result shows
+its full description, links, and every published version; picking a
+version's Install button downloads that version's primary file straight
+from Modrinth's CDN and installs it the same way "install by URL" does.
+If the version you pick doesn't list the game version or loader you
+filtered by, you'll get a confirmation prompt warning about the possible
+mismatch before it installs anyway - Paloondra doesn't know what version
+your server is actually running, so this is a best-effort check based on
+what you told the search filters, not a guarantee.
+
+Rate limits and network errors from Modrinth surface as a normal error
+toast/banner rather than crashing the tab - if you hit a rate limit, wait a
+moment and search again.
+
+**Mods are out of scope** for this tab - it only searches
+`project_type:plugin`. The `frontend/src/components/plugins/PluginStore.tsx`
+and `backend/src/services/modrinth.service.ts`/`pluginStore.routes.ts`
+files are where mod support (a separate Modrinth `project_type`, and likely
+its own tab given mods usually need a client-side counterpart) would slot
+in later - deliberately not implemented here.
+
+---
+
+## Scheduled tasks
+
+Cron-scheduled restarts or RCON commands (nightly restarts, timed
+announcements, periodic saves, whatever), editable in the Scheduled Tasks
+tab. Each task is:
+
+- A **name** (just for display).
+- A standard 5-field **cron expression** (`minute hour day month weekday`,
+  optionally 6 fields with a leading seconds field - see the presets
+  dropdown in the "New Task" form for common examples), evaluated in the
+  **backend's local timezone**.
+- An **action**: either "Restart server" (runs `RESTART_SCRIPT`, same as
+  the Dashboard button) or "RCON command" (any command, e.g. `say Server
+  restarting in 5 minutes`).
+- **Enabled** or not - disabled tasks are kept but not scheduled.
+
+Tasks persist to `DATA_DIR/scheduled-tasks.json` and are re-armed on
+backend startup. "Run now" triggers a task immediately without waiting for
+its schedule (handy for testing a new task actually does what you expect).
+Every run - scheduled or manual - records its result (RCON response, or
+confirmation the restart script was triggered) and shows up in both the
+task's "Last run" column and the [audit log](#audit-log).
+
+---
+
+## Backups
+
+Backups aren't a separate mechanism - "running a backup" is just
+`BACKUP_SCRIPT` (see [Shell scripts](#every-env-variable-explained)),
+triggered from the Backups tab's "Run Backup Now" button exactly like the
+Dashboard's Start/Stop/Restart buttons. What the Backups tab adds is a view
+into `BACKUPS_DIR`: list what's there, download an archive, or delete one,
+all over the same SFTP/sudo transport as the File Manager. Whatever backup
+strategy `BACKUP_SCRIPT` implements (a `tar` of the world folder, a
+plugin-based backup command, a call to an external tool) is entirely up to
+you - Paloondra just runs the script and shows you what it produced.
+
+---
+
+## server.properties editor
+
+Two modes, both writing to `SERVER_PROPERTIES_PATH` over SFTP:
+
+- **Form** - the ~20 most commonly changed keys (difficulty, gamemode, PvP,
+  whitelist, view/simulation distance, MOTD, level seed/name/type, and
+  more) get proper inputs (dropdowns for enums, checkboxes for booleans),
+  plus an "Other properties" section listing every other key already in
+  your file as a plain key/value row, with an "Add property" button for
+  anything not present yet. Saving only rewrites the specific lines that
+  changed - comments and ordering in the rest of the file are preserved.
+- **Raw** - the file as plain text, for anything the form doesn't cover or
+  if you just prefer editing it directly. Saving in this mode overwrites
+  the whole file with exactly what's in the textarea.
+
+`rcon.port` / `rcon.password` / `enable-rcon` are intentionally **not**
+given special form treatment - editing them here changes the actual file
+on the server but has no effect on Paloondra's own `RCON_HOST`/`RCON_PORT`/
+`RCON_PASSWORD` in `.env` (those are separate config, used to *connect*).
+If you change the RCON port/password in `server.properties`, update
+`backend/.env` to match and restart the backend, or RCON-dependent tabs
+will start failing to connect after the Minecraft server restarts.
+
+---
+
+## Audit log
+
+A small, append-only history of mutating admin actions - script runs
+(start/stop/restart/backup), plugin installs/deletes/toggles, backup
+deletes, scheduled task changes and runs, server.properties saves, and
+"quick action" RCON commands (the Dashboard's kick/ban/op/whitelist buttons
+and broadcast box). It's shown as a compact panel on the Dashboard (last
+15 entries, refreshing every 15s) and available in full via
+`GET /api/audit-log`.
+
+This is deliberately **not** a log of every command typed into the RCON
+Console tab - that tab already shows its own live command/response history
+in place; the audit log is for "what changed", not a general-purpose
+terminal transcript. It's stored as JSON in
+`DATA_DIR/audit-log.json` (capped at the most recent 1000 entries), the
+same local-to-the-backend storage the scheduler uses - see
+[Local data storage](#every-env-variable-explained).
 
 ---
 
@@ -522,6 +725,11 @@ possible.
 - The frontend image is also multi-stage: `vite build` runs in a Node
   stage, and only the static output is copied into a plain `nginx:alpine`
   image alongside `frontend/nginx.conf`.
+- The scheduler's tasks and the audit log ([Local data storage](#every-env-variable-explained))
+  live in the named `paloondra-data` volume, mounted at `/app/data` (the
+  default `DATA_DIR`). Without it, both would reset every time the backend
+  container is recreated. `docker compose down -v` removes it - don't run
+  that unless you actually want to lose scheduled tasks and audit history.
 
 ---
 
@@ -637,6 +845,41 @@ If the Minecraft server is on the same physical machine as Docker, set
 affects the start/stop/restart/backup scripts too, since they run over the
 same SSH connection.
 
+**Plugins/Backups/Server Config tab shows "not configured"**
+`PLUGINS_DIR` / `BACKUPS_DIR` / `SERVER_PROPERTIES_PATH` is unset in
+`backend/.env`. These are optional (unlike RCON/SSH, the backend still
+starts without them) so the tab just tells you it needs a value instead of
+failing at startup - set the relevant one and restart the backend.
+
+**Plugins list shows filenames but no real name/version/author**
+`plugin.yml`/`paper-plugin.yml` wasn't found or didn't parse inside that
+jar - this is display-only and doesn't block installing, enabling, or
+deleting it. Some jars (unusual build layouts, obfuscation) genuinely don't
+have a readable one; the filename fallback is expected in that case.
+
+**Installing a plugin fails with "doesn't look like a valid .jar file"**
+The downloaded/uploaded content doesn't start with a zip signature - the
+URL probably points to an HTML page (a download *landing* page, not the
+direct file link) rather than the actual `.jar`. Find the direct download
+link and try again.
+
+**Plugin store search fails with a rate-limit error**
+You're hitting Modrinth's public API rate limit. Wait a bit and search
+again - this isn't something Paloondra's config controls.
+
+**Scheduled task won't save: "... is not a valid cron expression"**
+Use the preset dropdown in the task form for known-good examples, or
+double check you have exactly 5 fields (minute hour day month weekday) -
+or 6 with an optional leading seconds field. `node-cron`'s validator is
+what's rejecting it, not a Paloondra-specific restriction.
+
+**Scheduled restart/RCON task ran but nothing happened in-game**
+Check the task's "Last run" column (hover it for the full result) and the
+audit log - a restart task only *triggers* `RESTART_SCRIPT` (see the
+Dashboard for its live output, same as clicking Restart by hand); an RCON
+task's result is the raw RCON response, which will clearly show a
+connection error if RCON was down at the time.
+
 ---
 
 ## Project structure
@@ -654,11 +897,14 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 
 | Tab | What it does |
 |---|---|
-| **Dashboard** | Online/offline status, Start/Stop/Restart buttons (run the configured scripts over SSH on the target server, output streams live), player count/TPS/host CPU/RAM/disk charts |
+| **Dashboard** | Online/offline status, Start/Stop/Restart buttons (run the configured scripts over SSH on the target server, output streams live), player count/TPS/host CPU/RAM/disk charts, online players with quick kick/ban/op/whitelist actions, a broadcast (`say`) box, and a recent-activity audit log panel |
 | **RCON Console** | Command input with history (↑/↓), live output log, auto-reconnect |
 | **SSH Terminal** | Full interactive shell (xterm.js + ssh2 PTY), resizable, auto-reconnects a fresh session if the connection drops |
 | **File Manager** | SFTP (or sudo-mode) browser: navigate, upload/download, rename, delete, mkdir, drag & drop (upload from OS, move between folders), built-in Monaco editor for text files |
-| **Plugins & Mods** | Placeholder ("На доработке") |
+| **Plugins & Mods** | Installed plugins (enable/disable/delete/download, real names parsed from `plugin.yml`), install by URL or drag-and-drop `.jar`, and a Modrinth-backed plugin store with search/filters/install - see [Plugins & the plugin store](#plugins--the-plugin-store) |
+| **Backups** | Trigger `BACKUP_SCRIPT`, list/download/delete what it produces - see [Backups](#backups) |
+| **Scheduled Tasks** | Cron-scheduled restarts or RCON commands, editable list, run-now - see [Scheduled tasks](#scheduled-tasks) |
+| **Server Config** | Friendly form + raw-text editor for `server.properties` - see [server.properties editor](#serverproperties-editor) |
 
 ## Notes on the implementation
 
@@ -686,6 +932,22 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   fixed only in vite 8 — a breaking upgrade out of scope here. Don't expose
   `vite dev` to an untrusted network; use `npm run build` + a real static
   server for anything other than local development.
+- **Scheduled tasks and the audit log** are the only state that persists
+  outside of "whatever's on the target server" - small JSON files in
+  `DATA_DIR`, written via a temp-file-then-rename so a crash mid-write
+  can't corrupt them. Everything else (plugin list, backups, players) is
+  read live from the target server on every request; there's no cache to
+  go stale except the small per-jar metadata cache in
+  `plugins.service.ts`, keyed by file size + modified time.
+- **The plugin store is the one feature that reaches outside your own
+  infrastructure** - search/browse/version calls go straight to
+  `MODRINTH_API_URL` from the backend (never the browser, avoiding CORS
+  and keeping Modrinth entirely out of the frontend's network surface).
+  Installing from it re-downloads the chosen file and re-uploads it to
+  `PLUGINS_DIR` over SFTP - Modrinth itself never touches your server. The
+  install endpoint only accepts file URLs on `cdn.modrinth.com`, separate
+  from the general "install by URL" feature which accepts any http(s) URL
+  you give it on purpose.
 
 ## Security
 
@@ -696,3 +958,22 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   see [Enabling sudo mode](#enabling-sudo-mode-for-the-file-manager).
 - The SFTP file editor refuses to open files over `EDITOR_MAX_FILE_SIZE`
   bytes (default 2 MiB) or files that look binary.
+- **"Install plugin by URL" fetches any http(s) URL you give it** and
+  uploads the result to `PLUGINS_DIR` as a `.jar` if it passes a basic
+  zip-signature check. That's the feature working as designed, not a bug -
+  same trust model as pasting a link into any other "download this for me"
+  tool. Only every user in `USERS` can reach it (it's behind the same auth
+  as everything else), so this is scoped by "who has a Paloondra login",
+  same as file deletes or running arbitrary RCON commands already are.
+- The Modrinth-backed **install-from-store** endpoint is intentionally
+  narrower: it only accepts file URLs on `cdn.modrinth.com`, so a request
+  crafted to look like a store install can't be used to smuggle an
+  arbitrary-URL fetch past that restriction.
+- Every plugin/backup filename that reaches a server-side path join is
+  validated to be a bare filename first (no `/`, `\`, `..`) - installing,
+  toggling, or deleting a plugin/backup can't be used to reach outside
+  `PLUGINS_DIR`/`BACKUPS_DIR` via a crafted filename.
+- The Dashboard's kick/ban/op/whitelist/broadcast buttons and every
+  plugin/backup/scheduler/server.properties mutation are recorded in the
+  [audit log](#audit-log) with the acting username - the interactive RCON
+  Console tab is not (it already shows its own live history in place).

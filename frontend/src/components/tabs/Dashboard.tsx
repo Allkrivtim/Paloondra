@@ -16,6 +16,9 @@ import { useDialog } from '../../context/DialogContext';
 import { ConsoleLine, MetricsSample, ScriptName, ServerStatus } from '../../types';
 import StatCard from '../common/StatCard';
 import Spinner from '../common/Spinner';
+import PlayerManagement from '../dashboard/PlayerManagement';
+import Broadcast from '../dashboard/Broadcast';
+import AuditLogPanel from '../dashboard/AuditLogPanel';
 
 const ACTION_LABELS: Record<ScriptName, string> = { start: 'Start', stop: 'Stop', restart: 'Restart' };
 
@@ -201,6 +204,12 @@ export default function Dashboard() {
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <PlayerManagement players={latest?.players ?? null} />
+        <Broadcast />
+        <AuditLogPanel />
       </section>
 
       <section className="rounded-xl border border-panel-border bg-panel-surface p-4">

@@ -145,6 +145,36 @@ export const env = {
   editor: {
     maxFileSize: optionalInt('EDITOR_MAX_FILE_SIZE', 2 * 1024 * 1024, { min: 1 }),
   },
+
+  // All optional, like SFTP_DEFAULT_PATH: unset means the corresponding tab
+  // shows a clear "not configured" state instead of failing startup, since
+  // (unlike RCON/SSH) these are individual features rather than core
+  // connectivity.
+  plugins: {
+    // Absolute path to the plugins/ directory ON THE TARGET SERVER.
+    dir: process.env.PLUGINS_DIR?.trim() || undefined,
+    maxJarSize: optionalInt('PLUGIN_JAR_MAX_SIZE', 100 * 1024 * 1024, { min: 1 }),
+  },
+
+  backups: {
+    // Absolute path to a backups directory ON THE TARGET SERVER, populated
+    // by whatever BACKUP_SCRIPT does. Only used for listing/downloading/
+    // deleting - triggering a backup still just runs BACKUP_SCRIPT above.
+    dir: process.env.BACKUPS_DIR?.trim() || undefined,
+  },
+
+  serverProperties: {
+    // Absolute path to server.properties ON THE TARGET SERVER.
+    path: process.env.SERVER_PROPERTIES_PATH?.trim() || undefined,
+  },
+
+  modrinth: {
+    apiUrl: optional('MODRINTH_API_URL', 'https://api.modrinth.com/v2'),
+  },
+
+  // Local directory ON THIS BACKEND'S HOST (not the target server - no SSH
+  // involved) where the scheduler and audit log persist their JSON state.
+  dataDir: optional('DATA_DIR', './data'),
 };
 
 if (!sshPassword && !sshKeyPath) {

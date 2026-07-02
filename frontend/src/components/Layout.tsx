@@ -7,6 +7,9 @@ const TABS = [
   { to: '/ssh', label: 'SSH Terminal' },
   { to: '/sftp', label: 'File Manager' },
   { to: '/plugins', label: 'Plugins & Mods' },
+  { to: '/backups', label: 'Backups' },
+  { to: '/scheduler', label: 'Scheduled Tasks' },
+  { to: '/server-properties', label: 'Server Config' },
 ];
 
 export default function Layout() {

@@ -121,18 +121,25 @@ class SudoFsService extends EventEmitter implements FileManagerService {
   }
 
   async readTextFile(filePath: string, maxSize: number): Promise<string> {
-    const info = await this.stat(filePath);
-    if (info.type !== 'file') {
-      throw new Error('Not a regular file');
-    }
-    if (info.size > maxSize) {
-      throw new Error(`File is too large to edit (${info.size} bytes, limit ${maxSize})`);
+    const buffer = await this.readBuffer(filePath, maxSize);
+    if (buffer.includes(0)) throw new Error('File appears to be binary');
+    return buffer.toString('utf8');
+  }
+
+  async readBuffer(filePath: string, maxSize?: number): Promise<Buffer> {
+    if (maxSize !== undefined) {
+      const info = await this.stat(filePath);
+      if (info.type !== 'file') {
+        throw new Error('Not a regular file');
+      }
+      if (info.size > maxSize) {
+        throw new Error(`File is too large (${info.size} bytes, limit ${maxSize})`);
+      }
     }
     const cmd = sudo(TOOLS.cat, shellEscape(filePath));
     const { buffer, code, stderr } = await this.execBuffer(cmd);
     if (code !== 0) throw new Error(stderr.trim() || `Failed to read "${filePath}"`);
-    if (buffer.includes(0)) throw new Error('File appears to be binary');
-    return buffer.toString('utf8');
+    return buffer;
   }
 
   async writeTextFile(filePath: string, content: string): Promise<void> {
