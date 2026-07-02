@@ -5,7 +5,7 @@ import { rconService } from '../services/rcon.service';
 import { ScriptName } from '../types';
 
 const router = Router();
-const VALID_ACTIONS: ScriptName[] = ['start', 'stop', 'restart'];
+const VALID_ACTIONS: ScriptName[] = ['start', 'stop', 'restart', 'backup'];
 
 router.use(requireAuth);
 
