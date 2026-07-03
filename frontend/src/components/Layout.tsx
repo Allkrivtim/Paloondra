@@ -1,33 +1,37 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-
-const TABS = [
-  { to: '/', label: 'Dashboard', end: true },
-  { to: '/rcon', label: 'RCON Console' },
-  { to: '/ssh', label: 'SSH Terminal' },
-  { to: '/sftp', label: 'File Manager' },
-  { to: '/plugins', label: 'Plugins & Mods' },
-  { to: '/backups', label: 'Backups' },
-  { to: '/scheduler', label: 'Scheduled Tasks' },
-  { to: '/server-properties', label: 'Server Config' },
-];
+import LanguageSwitcher from './common/LanguageSwitcher';
 
 export default function Layout() {
+  const { t } = useTranslation();
   const { username, logout } = useAuth();
+
+  const TABS = [
+    { to: '/', label: t('nav.dashboard'), end: true },
+    { to: '/rcon', label: t('nav.rcon') },
+    { to: '/ssh', label: t('nav.ssh') },
+    { to: '/sftp', label: t('nav.sftp') },
+    { to: '/plugins', label: t('nav.plugins') },
+    { to: '/backups', label: t('nav.backups') },
+    { to: '/scheduler', label: t('nav.scheduler') },
+    { to: '/server-properties', label: t('nav.serverProperties') },
+  ];
 
   return (
     <div className="flex h-full flex-col bg-panel-bg">
       <header className="flex items-center justify-between border-b border-panel-border bg-panel-surface px-4 py-3">
         <div className="flex items-center gap-2">
-          <h1 className="text-sm font-semibold text-panel-text sm:text-base">Paloondra</h1>
+          <h1 className="text-sm font-semibold text-panel-text sm:text-base">{t('app.name')}</h1>
         </div>
         <div className="flex items-center gap-3 text-sm text-panel-muted">
+          <LanguageSwitcher />
           <span className="hidden sm:inline">{username}</span>
           <button
             onClick={logout}
             className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-danger hover:text-panel-danger"
           >
-            Logout
+            {t('header.logout')}
           </button>
         </div>
       </header>

@@ -1,10 +1,12 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { getErrorMessage } from '../api/errors';
 import Spinner from './common/Spinner';
 
 export default function Login() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
@@ -20,7 +22,7 @@ export default function Login() {
       await login(username, password);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(getErrorMessage(err, 'Login failed'));
+      setError(getErrorMessage(err, t('login.loginFailed')));
     } finally {
       setSubmitting(false);
     }
@@ -32,11 +34,11 @@ export default function Login() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-xl border border-panel-border bg-panel-surface p-8 shadow-xl"
       >
-        <h1 className="mb-1 text-xl font-semibold text-panel-text">Paloondra</h1>
-        <p className="mb-6 text-sm text-panel-muted">Sign in to manage the server</p>
+        <h1 className="mb-1 text-xl font-semibold text-panel-text">{t('app.name')}</h1>
+        <p className="mb-6 text-sm text-panel-muted">{t('login.subtitle')}</p>
 
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">
-          Username
+          {t('login.username')}
         </label>
         <input
           autoFocus
@@ -48,7 +50,7 @@ export default function Login() {
         />
 
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">
-          Password
+          {t('login.password')}
         </label>
         <input
           value={password}
@@ -70,7 +72,7 @@ export default function Login() {
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-panel-accent2 px-3 py-2 text-sm font-medium text-black transition hover:bg-panel-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting && <Spinner className="h-4 w-4 text-black" />}
-          {submitting ? 'Signing in...' : 'Sign in'}
+          {submitting ? t('login.signingIn') : t('login.signIn')}
         </button>
       </form>
     </div>

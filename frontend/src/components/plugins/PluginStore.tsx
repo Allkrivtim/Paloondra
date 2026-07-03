@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { searchModrinth } from '../../api/modrinth';
 import { getErrorMessage } from '../../api/errors';
 import { useToast } from '../../context/ToastContext';
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export default function PluginStore({ onInstalled }: Props) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [query, setQuery] = useState('');
   const [gameVersion, setGameVersion] = useState('');
@@ -48,13 +50,13 @@ export default function PluginStore({ onInstalled }: Props) {
         setTotalHits(res.total_hits);
         setOffset(res.offset);
       } catch (err) {
-        setError(getErrorMessage(err, 'Modrinth search failed'));
+        setError(getErrorMessage(err, t('store.searchFailed')));
         setHits([]);
       } finally {
         setLoading(false);
       }
     },
-    [query, gameVersion, loader, category],
+    [query, gameVersion, loader, category, t],
   );
 
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function PluginStore({ onInstalled }: Props) {
         onBack={() => setSelectedProjectId(null)}
         onInstalled={() => {
           onInstalled();
-          toast.success('Installed from Modrinth');
+          toast.success(t('store.installedFromModrinth'));
         }}
       />
     );
@@ -86,16 +88,16 @@ export default function PluginStore({ onInstalled }: Props) {
     <div className="flex flex-col gap-4">
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border border-panel-border bg-panel-surface p-4">
         <div className="flex min-w-[200px] flex-1 flex-col gap-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-panel-muted">Search</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-panel-muted">{t('store.searchLabel')}</label>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. EssentialsX"
+            placeholder={t('store.searchPlaceholder')}
             className="rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 text-sm text-panel-text outline-none focus:border-panel-accent"
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-panel-muted">Game version</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-panel-muted">{t('store.gameVersionLabel')}</label>
           <input
             value={gameVersion}
             onChange={(e) => setGameVersion(e.target.value)}
@@ -104,13 +106,13 @@ export default function PluginStore({ onInstalled }: Props) {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-panel-muted">Loader</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-panel-muted">{t('store.loaderLabel')}</label>
           <select
             value={loader}
             onChange={(e) => setLoader(e.target.value)}
             className="rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 text-sm text-panel-text outline-none focus:border-panel-accent"
           >
-            <option value="">Any</option>
+            <option value="">{t('common.any')}</option>
             {LOADERS.map((l) => (
               <option key={l} value={l}>
                 {l}
@@ -119,13 +121,13 @@ export default function PluginStore({ onInstalled }: Props) {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-panel-muted">Category</label>
+          <label className="text-xs font-medium uppercase tracking-wide text-panel-muted">{t('store.categoryLabel')}</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 text-sm text-panel-text outline-none focus:border-panel-accent"
           >
-            <option value="">Any</option>
+            <option value="">{t('common.any')}</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -137,13 +139,13 @@ export default function PluginStore({ onInstalled }: Props) {
           type="submit"
           className="rounded-lg bg-panel-accent2 px-4 py-2 text-sm font-medium text-black transition hover:bg-panel-accent"
         >
-          Search
+          {t('store.search')}
         </button>
       </form>
 
       {loading && (
         <div className="flex items-center justify-center gap-2 py-16 text-panel-muted">
-          <Spinner /> Searching Modrinth...
+          <Spinner /> {t('store.searching')}
         </div>
       )}
 
@@ -155,7 +157,7 @@ export default function PluginStore({ onInstalled }: Props) {
             onClick={() => search(offset)}
             className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-accent hover:text-panel-accent"
           >
-            Retry
+            {t('common.retry')}
           </button>
         </div>
       )}
@@ -163,7 +165,7 @@ export default function PluginStore({ onInstalled }: Props) {
       {!loading && !error && hits.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-16 text-center text-panel-muted">
           <span className="text-3xl">🔍</span>
-          <p className="text-sm">No plugins found</p>
+          <p className="text-sm">{t('store.noResults')}</p>
         </div>
       )}
 
@@ -186,12 +188,12 @@ export default function PluginStore({ onInstalled }: Props) {
                   )}
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-panel-text">{hit.title}</div>
-                    <div className="truncate text-xs text-panel-muted">by {hit.author}</div>
+                    <div className="truncate text-xs text-panel-muted">{t('store.by', { author: hit.author })}</div>
                   </div>
                 </div>
                 <p className="line-clamp-2 text-xs text-panel-muted">{hit.description}</p>
                 <div className="mt-auto flex items-center justify-between text-xs text-panel-muted">
-                  <span>{hit.downloads.toLocaleString()} downloads</span>
+                  <span>{t('store.downloads', { count: hit.downloads.toLocaleString() })}</span>
                   <span className="truncate">{hit.versions.slice(-3).join(', ')}</span>
                 </div>
               </button>
@@ -200,7 +202,7 @@ export default function PluginStore({ onInstalled }: Props) {
 
           <div className="flex items-center justify-between text-xs text-panel-muted">
             <span>
-              {offset + 1}-{Math.min(offset + PAGE_SIZE, totalHits)} of {totalHits}
+              {t('store.rangeOfTotal', { from: offset + 1, to: Math.min(offset + PAGE_SIZE, totalHits), total: totalHits })}
             </span>
             <div className="flex gap-2">
               <button
@@ -208,14 +210,14 @@ export default function PluginStore({ onInstalled }: Props) {
                 disabled={offset === 0}
                 className="rounded-lg border border-panel-border px-3 py-1.5 disabled:opacity-40"
               >
-                Previous
+                {t('store.previous')}
               </button>
               <button
                 onClick={() => search(offset + PAGE_SIZE)}
                 disabled={offset + PAGE_SIZE >= totalHits}
                 className="rounded-lg border border-panel-border px-3 py-1.5 disabled:opacity-40"
               >
-                Next
+                {t('store.next')}
               </button>
             </div>
           </div>

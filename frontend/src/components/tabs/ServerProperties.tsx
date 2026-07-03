@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getServerProperties,
   saveServerProperties,
@@ -13,6 +14,7 @@ import { KNOWN_KEYS, KNOWN_PROPERTIES } from '../serverProperties/knownPropertie
 type Mode = 'form' | 'raw';
 
 export default function ServerProperties() {
+  const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
   const [mode, setMode] = useState<Mode>('form');
@@ -32,7 +34,7 @@ export default function ServerProperties() {
       setRaw(doc.raw);
       setDirty(false);
     } catch (err) {
-      setLoadError(getErrorMessage(err, 'Failed to load server.properties'));
+      setLoadError(getErrorMessage(err, t('serverProperties.failedToLoad')));
     } finally {
       setLoading(false);
     }
@@ -40,6 +42,7 @@ export default function ServerProperties() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function setValue(key: string, value: string) {
@@ -57,10 +60,13 @@ export default function ServerProperties() {
   }
 
   async function handleAddProperty() {
-    const key = await dialog.prompt({ title: 'Add property', placeholder: 'property-key' });
+    const key = await dialog.prompt({
+      title: t('serverProperties.addPropertyTitle'),
+      placeholder: t('serverProperties.addPropertyPlaceholder'),
+    });
     if (!key) return;
     if (key in properties) {
-      toast.error(`"${key}" already exists`);
+      toast.error(t('serverProperties.alreadyExists', { key }));
       return;
     }
     setValue(key, '');
@@ -73,9 +79,9 @@ export default function ServerProperties() {
       setProperties(doc.properties);
       setRaw(doc.raw);
       setDirty(false);
-      toast.success('server.properties saved');
+      toast.success(t('serverProperties.saved'));
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to save server.properties'));
+      toast.error(getErrorMessage(err, t('serverProperties.failedToSave')));
     } finally {
       setSaving(false);
     }
@@ -88,7 +94,7 @@ export default function ServerProperties() {
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-sm font-semibold text-panel-text">server.properties</h1>
+        <h1 className="text-sm font-semibold text-panel-text">{t('serverProperties.title')}</h1>
         <div className="flex items-center gap-3">
           <div className="flex gap-1 rounded-lg border border-panel-border p-0.5 text-xs">
             {(['form', 'raw'] as Mode[]).map((m) => (
@@ -99,7 +105,7 @@ export default function ServerProperties() {
                   mode === m ? 'bg-panel-accent2 text-black' : 'text-panel-muted hover:text-panel-text'
                 }`}
               >
-                {m === 'form' ? 'Form' : 'Raw'}
+                {m === 'form' ? t('serverProperties.form') : t('serverProperties.raw')}
               </button>
             ))}
           </div>
@@ -109,14 +115,14 @@ export default function ServerProperties() {
             className="flex items-center gap-1.5 rounded-lg bg-panel-accent2 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
           >
             {saving && <Spinner className="h-3 w-3 text-black" />}
-            Save
+            {t('serverProperties.save')}
           </button>
         </div>
       </div>
 
       {loading && (
         <div className="flex items-center justify-center gap-2 py-16 text-panel-muted">
-          <Spinner /> Loading...
+          <Spinner /> {t('serverProperties.loading')}
         </div>
       )}
 
@@ -128,7 +134,7 @@ export default function ServerProperties() {
             onClick={load}
             className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-accent hover:text-panel-accent"
           >
-            Retry
+            {t('serverProperties.retry')}
           </button>
         </div>
       )}
@@ -150,7 +156,9 @@ export default function ServerProperties() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {KNOWN_PROPERTIES.map((meta) => (
               <div key={meta.key} className="rounded-xl border border-panel-border bg-panel-surface p-3">
-                <label className="mb-1 block text-xs font-medium text-panel-muted">{meta.label}</label>
+                <label className="mb-1 block text-xs font-medium text-panel-muted">
+                  {t(`propertyKeys.${meta.key}`)}
+                </label>
                 {meta.type === 'boolean' ? (
                   <select
                     value={properties[meta.key] ?? 'false'}
@@ -187,13 +195,13 @@ export default function ServerProperties() {
 
           <div className="mt-4 rounded-xl border border-panel-border bg-panel-surface p-3">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-panel-text">Other properties</h2>
+              <h2 className="text-sm font-semibold text-panel-text">{t('serverProperties.otherProperties')}</h2>
               <button onClick={handleAddProperty} className="text-xs text-panel-accent hover:underline">
-                + Add property
+                {t('serverProperties.addProperty')}
               </button>
             </div>
             {otherKeys.length === 0 ? (
-              <p className="text-xs text-panel-muted">No other properties in this file.</p>
+              <p className="text-xs text-panel-muted">{t('serverProperties.noOtherProperties')}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {otherKeys.map((key) => (
@@ -208,7 +216,7 @@ export default function ServerProperties() {
                       onClick={() => removeOther(key)}
                       className="text-xs text-panel-muted hover:text-panel-danger"
                     >
-                      Remove
+                      {t('serverProperties.remove')}
                     </button>
                   </div>
                 ))}

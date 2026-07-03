@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   createScheduledTask,
   deleteScheduledTask,
@@ -13,14 +14,15 @@ import { ScheduledTask, ScheduledTaskInput } from '../../types';
 import Spinner from '../common/Spinner';
 import TaskFormModal from '../scheduler/TaskFormModal';
 
-function formatTime(ts: number | null) {
-  if (!ts) return 'Never';
-  return new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
 export default function ScheduledTasks() {
+  const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
+
+  function formatTime(ts: number | null) {
+    if (!ts) return t('common.never');
+    return new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -33,11 +35,11 @@ export default function ScheduledTasks() {
     try {
       setTasks(await listScheduledTasks());
     } catch (err) {
-      setLoadError(getErrorMessage(err, 'Failed to load scheduled tasks'));
+      setLoadError(getErrorMessage(err, t('scheduler.failedToLoadTasks')));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refresh();
@@ -59,10 +61,10 @@ export default function ScheduledTasks() {
   async function handleSubmit(input: ScheduledTaskInput) {
     if (modalTask && modalTask !== 'new') {
       const task = await updateScheduledTask(modalTask.id, input);
-      toast.success(`Updated "${task.name}"`);
+      toast.success(t('scheduler.updatedToast', { name: task.name }));
     } else {
       const task = await createScheduledTask(input);
-      toast.success(`Created "${task.name}"`);
+      toast.success(t('scheduler.createdToast', { name: task.name }));
     }
     setModalTask(null);
     await refresh();
@@ -80,7 +82,7 @@ export default function ScheduledTasks() {
         });
         await refresh();
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to update task'));
+        toast.error(getErrorMessage(err, t('scheduler.failedToUpdate')));
       }
     });
   }
@@ -89,28 +91,28 @@ export default function ScheduledTasks() {
     await withBusy(task.id, async () => {
       try {
         await runScheduledTaskNow(task.id);
-        toast.success(`Ran "${task.name}"`);
+        toast.success(t('scheduler.ranToast', { name: task.name }));
         await refresh();
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to run task'));
+        toast.error(getErrorMessage(err, t('scheduler.failedToRun')));
       }
     });
   }
 
   async function handleDelete(task: ScheduledTask) {
     const confirmed = await dialog.confirm({
-      title: `Delete "${task.name}"?`,
-      confirmLabel: 'Delete',
+      title: t('scheduler.deleteTitle', { name: task.name }),
+      confirmLabel: t('common.delete'),
       danger: true,
     });
     if (!confirmed) return;
     await withBusy(task.id, async () => {
       try {
         await deleteScheduledTask(task.id);
-        toast.success(`Deleted "${task.name}"`);
+        toast.success(t('scheduler.deletedToast', { name: task.name }));
         await refresh();
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to delete task'));
+        toast.error(getErrorMessage(err, t('scheduler.failedToDelete')));
       }
     });
   }
@@ -118,19 +120,19 @@ export default function ScheduledTasks() {
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-sm font-semibold text-panel-text">Scheduled Tasks</h1>
+        <h1 className="text-sm font-semibold text-panel-text">{t('scheduler.title')}</h1>
         <button
           onClick={() => setModalTask('new')}
           className="rounded-lg bg-panel-accent2 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-panel-accent"
         >
-          + New Task
+          {t('scheduler.newTask')}
         </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-panel-border bg-panel-surface">
         {loading && (
           <div className="flex items-center justify-center gap-2 py-16 text-panel-muted">
-            <Spinner /> Loading tasks...
+            <Spinner /> {t('scheduler.loadingTasks')}
           </div>
         )}
 
@@ -144,8 +146,8 @@ export default function ScheduledTasks() {
         {!loading && !loadError && tasks.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-center text-panel-muted">
             <span className="text-3xl">⏰</span>
-            <p className="text-sm">No scheduled tasks yet</p>
-            <p className="text-xs">Create one to automate restarts or RCON commands.</p>
+            <p className="text-sm">{t('scheduler.noTasksTitle')}</p>
+            <p className="text-xs">{t('scheduler.noTasksHint')}</p>
           </div>
         )}
 
@@ -153,12 +155,12 @@ export default function ScheduledTasks() {
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 bg-panel-surface2 text-xs uppercase tracking-wide text-panel-muted">
               <tr>
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Schedule</th>
-                <th className="px-4 py-2 font-medium">Action</th>
-                <th className="px-4 py-2 font-medium">Last run</th>
-                <th className="px-4 py-2 font-medium">Enabled</th>
-                <th className="px-4 py-2 font-medium text-right">Actions</th>
+                <th className="px-4 py-2 font-medium">{t('scheduler.columnName')}</th>
+                <th className="px-4 py-2 font-medium">{t('scheduler.columnSchedule')}</th>
+                <th className="px-4 py-2 font-medium">{t('scheduler.columnAction')}</th>
+                <th className="px-4 py-2 font-medium">{t('scheduler.columnLastRun')}</th>
+                <th className="px-4 py-2 font-medium">{t('scheduler.columnEnabled')}</th>
+                <th className="px-4 py-2 font-medium text-right">{t('scheduler.columnActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -179,7 +181,11 @@ export default function ScheduledTasks() {
                     </td>
                     <td className="px-4 py-2 font-mono text-xs text-panel-muted">{task.schedule}</td>
                     <td className="px-4 py-2 text-panel-muted">
-                      {task.type === 'restart' ? 'Restart server' : <code className="text-xs">{task.command}</code>}
+                      {task.type === 'restart' ? (
+                        t('scheduler.restartServerAction')
+                      ) : (
+                        <code className="text-xs">{task.command}</code>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-panel-muted">
                       <div title={task.lastRunResult ?? undefined}>{formatTime(task.lastRunAt)}</div>
@@ -206,21 +212,21 @@ export default function ScheduledTasks() {
                           disabled={isBusy}
                           className="text-panel-muted hover:text-panel-accent disabled:opacity-50"
                         >
-                          Run now
+                          {t('scheduler.runNow')}
                         </button>
                         <button
                           onClick={() => setModalTask(task)}
                           disabled={isBusy}
                           className="text-panel-muted hover:text-panel-accent disabled:opacity-50"
                         >
-                          Edit
+                          {t('scheduler.edit')}
                         </button>
                         <button
                           onClick={() => handleDelete(task)}
                           disabled={isBusy}
                           className="text-panel-muted hover:text-panel-danger disabled:opacity-50"
                         >
-                          Delete
+                          {t('scheduler.delete')}
                         </button>
                       </div>
                     </td>

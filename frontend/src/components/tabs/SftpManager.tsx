@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { useTranslation } from 'react-i18next';
 import {
   deleteItem,
   downloadFile,
@@ -30,6 +31,7 @@ function icon(entry: SftpEntry): string {
 }
 
 export default function SftpManager() {
+  const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
   const [currentPath, setCurrentPath] = useState('/');
@@ -49,11 +51,11 @@ export default function SftpManager() {
       setEntries(res.entries);
       setCurrentPath(res.path);
     } catch (err) {
-      setLoadError(getErrorMessage(err, 'Failed to load directory'));
+      setLoadError(getErrorMessage(err, t('sftp.failedToLoadDirectory')));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     getDefaultPath()
@@ -66,13 +68,13 @@ export default function SftpManager() {
       if (accepted.length === 0) return;
       try {
         await uploadFiles(currentPath, accepted);
-        toast.success(`Uploaded ${accepted.length} file${accepted.length === 1 ? '' : 's'}`);
+        toast.success(t('sftp.uploadedToast', { count: accepted.length }));
         await refresh(currentPath);
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Upload failed'));
+        toast.error(getErrorMessage(err, t('sftp.uploadFailed')));
       }
     },
-    [currentPath, refresh, toast],
+    [currentPath, refresh, toast, t],
   );
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -88,11 +90,11 @@ export default function SftpManager() {
     }
     if (entry.type === 'file') {
       if (entry.size > EDITOR_SIZE_LIMIT) {
-        toast.error(`"${entry.name}" is too large to edit (${formatBytes(entry.size)}). Download it instead.`);
+        toast.error(t('sftp.tooLargeToEdit', { name: entry.name, size: formatBytes(entry.size) }));
         return;
       }
       if (!looksLikeTextFile(entry.name)) {
-        toast.error(`"${entry.name}" doesn't look like a text file. Download it instead.`);
+        toast.error(t('sftp.notTextFile', { name: entry.name }));
         return;
       }
       withBusy(entry.path, async () => {
@@ -100,7 +102,7 @@ export default function SftpManager() {
           const content = await readFile(entry.path);
           setEditingFile({ path: entry.path, content });
         } catch (err) {
-          toast.error(getErrorMessage(err, 'Failed to open file'));
+          toast.error(getErrorMessage(err, t('sftp.failedToOpenFile')));
         }
       });
     }
@@ -121,58 +123,55 @@ export default function SftpManager() {
 
   async function handleMkdir() {
     const name = await dialog.prompt({
-      title: 'New folder',
-      placeholder: 'Folder name',
-      confirmLabel: 'Create',
+      title: t('sftp.newFolderTitle'),
+      placeholder: t('sftp.folderNamePlaceholder'),
+      confirmLabel: t('common.create'),
     });
     if (!name) return;
     await withBusy('__mkdir__', async () => {
       try {
         await mkdir(joinPath(currentPath, name));
-        toast.success(`Created "${name}"`);
+        toast.success(t('sftp.createdToast', { name }));
         await refresh(currentPath);
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to create folder'));
+        toast.error(getErrorMessage(err, t('sftp.failedToCreateFolder')));
       }
     });
   }
 
   async function handleRename(entry: SftpEntry) {
     const name = await dialog.prompt({
-      title: `Rename "${entry.name}"`,
+      title: t('sftp.renameTitle', { name: entry.name }),
       defaultValue: entry.name,
-      confirmLabel: 'Rename',
+      confirmLabel: t('common.rename'),
     });
     if (!name || name === entry.name) return;
     await withBusy(entry.path, async () => {
       try {
         await renameItem(entry.path, joinPath(currentPath, name));
-        toast.success(`Renamed to "${name}"`);
+        toast.success(t('sftp.renamedToast', { name }));
         await refresh(currentPath);
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to rename'));
+        toast.error(getErrorMessage(err, t('sftp.failedToRename')));
       }
     });
   }
 
   async function handleDelete(entry: SftpEntry) {
     const confirmed = await dialog.confirm({
-      title: `Delete "${entry.name}"?`,
-      message:
-        entry.type === 'directory'
-          ? 'This deletes the folder and everything inside it. This cannot be undone.'
-          : 'This cannot be undone.',
-      confirmLabel: 'Delete',
+      title: t('sftp.deleteTitle', { name: entry.name }),
+      message: entry.type === 'directory' ? t('sftp.deleteFolderMessage') : t('sftp.deleteFileMessage'),
+      confirmLabel: t('common.delete'),
       danger: true,
     });
     if (!confirmed) return;
     await withBusy(entry.path, async () => {
       try {
         await deleteItem(entry.path);
-        toast.success(`Deleted "${entry.name}"`);
+        toast.success(t('sftp.deletedToast', { name: entry.name }));
         await refresh(currentPath);
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to delete'));
+        toast.error(getErrorMessage(err, t('sftp.failedToDelete')));
       }
     });
   }
@@ -181,7 +180,7 @@ export default function SftpManager() {
     try {
       await downloadFile(entry.path, entry.name);
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to download'));
+      toast.error(getErrorMessage(err, t('sftp.failedToDownload')));
     }
   }
 
@@ -193,10 +192,10 @@ export default function SftpManager() {
     await withBusy(selected, async () => {
       try {
         await moveItem(selected, dest);
-        toast.success(`Moved "${name}"`);
+        toast.success(t('sftp.movedToast', { name }));
         await refresh(currentPath);
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to move item'));
+        toast.error(getErrorMessage(err, t('sftp.failedToMove')));
       } finally {
         setSelected(null);
         setDragOverPath(null);
@@ -216,19 +215,20 @@ export default function SftpManager() {
             disabled={mkdirBusy}
             className="flex items-center gap-1.5 rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-accent hover:text-panel-accent disabled:opacity-50"
           >
-            {mkdirBusy && <Spinner className="h-3 w-3" />}+ New Folder
+            {mkdirBusy && <Spinner className="h-3 w-3" />}
+            {t('sftp.newFolder')}
           </button>
           <button
             onClick={open}
             className="rounded-lg bg-panel-accent2 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-panel-accent"
           >
-            Upload
+            {t('sftp.upload')}
           </button>
           <button
             onClick={() => refresh(currentPath)}
             className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-accent hover:text-panel-accent"
           >
-            Refresh
+            {t('sftp.refresh')}
           </button>
         </div>
       </div>
@@ -242,13 +242,13 @@ export default function SftpManager() {
         <input {...getInputProps()} />
         {isDragActive && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-panel-bg/70 text-sm font-medium text-panel-accent">
-            Drop files to upload to {currentPath}
+            {t('sftp.dropToUpload', { path: currentPath })}
           </div>
         )}
 
         {loading && (
           <div className="flex items-center justify-center gap-2 py-16 text-panel-muted">
-            <Spinner /> Loading directory...
+            <Spinner /> {t('sftp.loadingDirectory')}
           </div>
         )}
 
@@ -260,7 +260,7 @@ export default function SftpManager() {
               onClick={() => refresh(currentPath)}
               className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-accent hover:text-panel-accent"
             >
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -268,8 +268,8 @@ export default function SftpManager() {
         {!loading && !loadError && entries.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-center text-panel-muted">
             <span className="text-3xl">📂</span>
-            <p className="text-sm">This folder is empty</p>
-            <p className="text-xs">Drag files here to upload, or use the buttons above.</p>
+            <p className="text-sm">{t('sftp.emptyFolderTitle')}</p>
+            <p className="text-xs">{t('sftp.emptyFolderHint')}</p>
           </div>
         )}
 
@@ -277,11 +277,11 @@ export default function SftpManager() {
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 bg-panel-surface2 text-xs uppercase tracking-wide text-panel-muted">
               <tr>
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Size</th>
-                <th className="px-4 py-2 font-medium">Permissions</th>
-                <th className="px-4 py-2 font-medium">Modified</th>
-                <th className="px-4 py-2 font-medium text-right">Actions</th>
+                <th className="px-4 py-2 font-medium">{t('sftp.columnName')}</th>
+                <th className="px-4 py-2 font-medium">{t('sftp.columnSize')}</th>
+                <th className="px-4 py-2 font-medium">{t('sftp.columnPermissions')}</th>
+                <th className="px-4 py-2 font-medium">{t('sftp.columnModified')}</th>
+                <th className="px-4 py-2 font-medium text-right">{t('sftp.columnActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -318,7 +318,7 @@ export default function SftpManager() {
                       </button>
                     </td>
                     <td className="px-4 py-2 text-panel-muted">
-                      {entry.type === 'file' ? formatBytes(entry.size) : '—'}
+                      {entry.type === 'file' ? formatBytes(entry.size) : t('common.emptyValue')}
                     </td>
                     <td className="px-4 py-2 font-mono text-xs text-panel-muted">{entry.permissions}</td>
                     <td className="px-4 py-2 text-panel-muted">{formatDate(entry.modifiedAt)}</td>
@@ -330,7 +330,7 @@ export default function SftpManager() {
                             disabled={busy}
                             className="text-panel-muted hover:text-panel-accent disabled:opacity-50"
                           >
-                            Download
+                            {t('sftp.download')}
                           </button>
                         )}
                         <button
@@ -338,14 +338,14 @@ export default function SftpManager() {
                           disabled={busy}
                           className="text-panel-muted hover:text-panel-accent disabled:opacity-50"
                         >
-                          Rename
+                          {t('sftp.rename')}
                         </button>
                         <button
                           onClick={() => handleDelete(entry)}
                           disabled={busy}
                           className="text-panel-muted hover:text-panel-danger disabled:opacity-50"
                         >
-                          Delete
+                          {t('sftp.delete')}
                         </button>
                       </div>
                     </td>
@@ -364,7 +364,7 @@ export default function SftpManager() {
           onClose={() => setEditingFile(null)}
           onSave={async (content) => {
             await writeFile(editingFile.path, content);
-            toast.success('File saved');
+            toast.success(t('fileEditor.fileSaved'));
           }}
         />
       )}

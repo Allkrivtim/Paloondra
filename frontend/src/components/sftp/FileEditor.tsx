@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
+import { useTranslation } from 'react-i18next';
 import { getErrorMessage } from '../../api/errors';
 import Spinner from '../common/Spinner';
 import { monacoLanguageFor } from './format';
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function FileEditor({ path, initialContent, onClose, onSave }: Props) {
+  const { t } = useTranslation();
   const [content, setContent] = useState(initialContent);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -24,7 +26,7 @@ export default function FileEditor({ path, initialContent, onClose, onSave }: Pr
       await onSave(content);
       setDirty(false);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to save file'));
+      setError(getErrorMessage(err, t('fileEditor.failedToSave')));
     } finally {
       setSaving(false);
     }
@@ -46,13 +48,13 @@ export default function FileEditor({ path, initialContent, onClose, onSave }: Pr
               className="flex items-center gap-1.5 rounded-lg bg-panel-accent2 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
             >
               {saving && <Spinner className="h-3 w-3 text-black" />}
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('fileEditor.saving') : t('fileEditor.save')}
             </button>
             <button
               onClick={onClose}
               className="rounded-lg border border-panel-border px-3 py-1.5 text-xs text-panel-text transition hover:border-panel-danger hover:text-panel-danger"
             >
-              Close
+              {t('fileEditor.close')}
             </button>
           </div>
         </div>

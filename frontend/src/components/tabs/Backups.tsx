@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { deleteBackup, listBackups, runBackup } from '../../api/backups';
 import { downloadFile } from '../../api/sftp';
 import { getErrorMessage } from '../../api/errors';
@@ -9,6 +10,7 @@ import Spinner from '../common/Spinner';
 import { formatBytes, formatDate } from '../sftp/format';
 
 export default function Backups() {
+  const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
   const [backups, setBackups] = useState<BackupInfo[]>([]);
@@ -23,11 +25,11 @@ export default function Backups() {
     try {
       setBackups(await listBackups());
     } catch (err) {
-      setLoadError(getErrorMessage(err, 'Failed to load backups'));
+      setLoadError(getErrorMessage(err, t('backups.failedToLoadBackups')));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refresh();
@@ -50,10 +52,10 @@ export default function Backups() {
     setRunning(true);
     try {
       await runBackup();
-      toast.success('Backup triggered - see Dashboard for live output');
+      toast.success(t('backups.backupTriggered'));
       setTimeout(refresh, 3000);
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to trigger backup'));
+      toast.error(getErrorMessage(err, t('backups.failedToTrigger')));
     } finally {
       setRunning(false);
     }
@@ -63,25 +65,25 @@ export default function Backups() {
     try {
       await downloadFile(backup.path, backup.filename);
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to download backup'));
+      toast.error(getErrorMessage(err, t('backups.failedToDownload')));
     }
   }
 
   async function handleDelete(backup: BackupInfo) {
     const confirmed = await dialog.confirm({
-      title: `Delete "${backup.filename}"?`,
-      message: 'This cannot be undone.',
-      confirmLabel: 'Delete',
+      title: t('backups.deleteTitle', { name: backup.filename }),
+      message: t('backups.deleteMessage'),
+      confirmLabel: t('common.delete'),
       danger: true,
     });
     if (!confirmed) return;
     await withBusy(backup.filename, async () => {
       try {
         await deleteBackup(backup.filename);
-        toast.success(`Deleted "${backup.filename}"`);
+        toast.success(t('backups.deletedToast', { name: backup.filename }));
         await refresh();
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to delete backup'));
+        toast.error(getErrorMessage(err, t('backups.failedToDelete')));
       }
     });
   }
@@ -89,7 +91,7 @@ export default function Backups() {
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-sm font-semibold text-panel-text">Backups</h1>
+        <h1 className="text-sm font-semibold text-panel-text">{t('backups.title')}</h1>
         <div className="flex gap-2">
           <button
             onClick={handleRunBackup}
@@ -97,13 +99,13 @@ export default function Backups() {
             className="flex items-center gap-1.5 rounded-lg bg-panel-accent2 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
           >
             {running && <Spinner className="h-3 w-3 text-black" />}
-            {running ? 'Triggering...' : 'Run Backup Now'}
+            {running ? t('backups.triggering') : t('backups.runBackupNow')}
           </button>
           <button
             onClick={refresh}
             className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-accent hover:text-panel-accent"
           >
-            Refresh
+            {t('backups.refresh')}
           </button>
         </div>
       </div>
@@ -111,7 +113,7 @@ export default function Backups() {
       <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-panel-border bg-panel-surface">
         {loading && (
           <div className="flex items-center justify-center gap-2 py-16 text-panel-muted">
-            <Spinner /> Loading backups...
+            <Spinner /> {t('backups.loadingBackups')}
           </div>
         )}
 
@@ -123,7 +125,7 @@ export default function Backups() {
               onClick={refresh}
               className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-accent hover:text-panel-accent"
             >
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -131,8 +133,8 @@ export default function Backups() {
         {!loading && !loadError && backups.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-center text-panel-muted">
             <span className="text-3xl">🗄️</span>
-            <p className="text-sm">No backups yet</p>
-            <p className="text-xs">Click "Run Backup Now" to create one.</p>
+            <p className="text-sm">{t('backups.noBackupsTitle')}</p>
+            <p className="text-xs">{t('backups.noBackupsHint')}</p>
           </div>
         )}
 
@@ -140,10 +142,10 @@ export default function Backups() {
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 bg-panel-surface2 text-xs uppercase tracking-wide text-panel-muted">
               <tr>
-                <th className="px-4 py-2 font-medium">Filename</th>
-                <th className="px-4 py-2 font-medium">Size</th>
-                <th className="px-4 py-2 font-medium">Created</th>
-                <th className="px-4 py-2 font-medium text-right">Actions</th>
+                <th className="px-4 py-2 font-medium">{t('backups.columnFilename')}</th>
+                <th className="px-4 py-2 font-medium">{t('backups.columnSize')}</th>
+                <th className="px-4 py-2 font-medium">{t('backups.columnCreated')}</th>
+                <th className="px-4 py-2 font-medium text-right">{t('backups.columnActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -172,14 +174,14 @@ export default function Backups() {
                           disabled={isBusy}
                           className="text-panel-muted hover:text-panel-accent disabled:opacity-50"
                         >
-                          Download
+                          {t('backups.download')}
                         </button>
                         <button
                           onClick={() => handleDelete(backup)}
                           disabled={isBusy}
                           className="text-panel-muted hover:text-panel-danger disabled:opacity-50"
                         >
-                          Delete
+                          {t('backups.delete')}
                         </button>
                       </div>
                     </td>

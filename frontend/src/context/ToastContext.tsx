@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type ToastKind = 'success' | 'error' | 'info';
 
@@ -37,6 +38,7 @@ const KIND_ICON_COLOR: Record<ToastKind, string> = {
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const idRef = useRef(0);
 
@@ -66,18 +68,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2">
-        {toasts.map((t) => (
+        {toasts.map((toastItem) => (
           <div
-            key={t.id}
+            key={toastItem.id}
             role="status"
-            className={`toast-enter pointer-events-auto flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm shadow-lg backdrop-blur ${KIND_STYLES[t.kind]}`}
+            className={`toast-enter pointer-events-auto flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm shadow-lg backdrop-blur ${KIND_STYLES[toastItem.kind]}`}
           >
-            <span className={`mt-0.5 font-semibold ${KIND_ICON_COLOR[t.kind]}`}>{KIND_ICON[t.kind]}</span>
-            <span className="flex-1 leading-snug">{t.message}</span>
+            <span className={`mt-0.5 font-semibold ${KIND_ICON_COLOR[toastItem.kind]}`}>{KIND_ICON[toastItem.kind]}</span>
+            <span className="flex-1 leading-snug">{toastItem.message}</span>
             <button
-              onClick={() => dismiss(t.id)}
+              onClick={() => dismiss(toastItem.id)}
               className="text-panel-muted transition hover:text-panel-text"
-              aria-label="Dismiss"
+              aria-label={t('common.dismiss')}
             >
               ✕
             </button>

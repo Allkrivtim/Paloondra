@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface Props {
   path: string;
   onNavigate: (path: string) => void;
@@ -5,8 +7,9 @@ interface Props {
 }
 
 export default function Breadcrumbs({ path, onNavigate, onDropMove }: Props) {
+  const { t } = useTranslation();
   const parts = path.split('/').filter(Boolean);
-  const crumbs = [{ label: 'root', path: '/' }, ...parts.map((part, i) => ({
+  const crumbs = [{ label: t('sftp.rootBreadcrumb'), path: '/' }, ...parts.map((part, i) => ({
     label: part,
     path: '/' + parts.slice(0, i + 1).join('/'),
   }))];
