@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { runRconCommand } from '../../api/rcon';
 import { getErrorMessage } from '../../api/errors';
 import { useToast } from '../../context/ToastContext';
@@ -19,23 +20,24 @@ const ACTION_COMMAND: Record<Action, (name: string) => string> = {
   whitelist: (name) => `whitelist add ${name}`,
 };
 
-const ACTION_LABEL: Record<Action, string> = {
-  kick: 'Kick',
-  ban: 'Ban',
-  op: 'Op',
-  whitelist: 'Whitelist',
-};
-
 export default function PlayerManagement({ players }: Props) {
+  const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
   const [busy, setBusy] = useState<string | null>(null);
 
+  const ACTION_LABEL: Record<Action, string> = {
+    kick: t('players.kick'),
+    ban: t('players.ban'),
+    op: t('players.op'),
+    whitelist: t('players.whitelist'),
+  };
+
   async function runAction(player: string, action: Action) {
     if (action === 'kick' || action === 'ban') {
       const confirmed = await dialog.confirm({
-        title: `${ACTION_LABEL[action]} ${player}?`,
-        message: action === 'ban' ? 'This also removes them from the server.' : undefined,
+        title: t('players.confirmTitle', { action: ACTION_LABEL[action], player }),
+        message: action === 'ban' ? t('players.banExtraMessage') : undefined,
         confirmLabel: ACTION_LABEL[action],
         danger: true,
       });
@@ -46,9 +48,9 @@ export default function PlayerManagement({ players }: Props) {
     setBusy(key);
     try {
       const { response } = await runRconCommand(ACTION_COMMAND[action](player));
-      toast.success(response.trim() || `${ACTION_LABEL[action]} sent for ${player}`);
+      toast.success(response.trim() || t('players.actionSentFallback', { action: ACTION_LABEL[action], player }));
     } catch (err) {
-      toast.error(getErrorMessage(err, `Failed to ${action} ${player}`));
+      toast.error(getErrorMessage(err, t('players.failedToRunAction', { action: ACTION_LABEL[action], player })));
     } finally {
       setBusy(null);
     }
@@ -56,9 +58,9 @@ export default function PlayerManagement({ players }: Props) {
 
   return (
     <div className="rounded-xl border border-panel-border bg-panel-surface p-4">
-      <h2 className="mb-3 text-sm font-semibold text-panel-text">Players Online</h2>
+      <h2 className="mb-3 text-sm font-semibold text-panel-text">{t('players.title')}</h2>
       {!players || players.online === 0 ? (
-        <p className="text-sm text-panel-muted">No players online.</p>
+        <p className="text-sm text-panel-muted">{t('players.noPlayersOnline')}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {players.names.map((name) => (

@@ -1,4 +1,5 @@
 import { createContext, FormEvent, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmOptions {
   title: string;
@@ -28,6 +29,7 @@ interface DialogContextValue {
 const DialogContext = createContext<DialogContextValue | undefined>(undefined);
 
 export function DialogProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [pending, setPending] = useState<PendingRequest | null>(null);
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -91,14 +93,14 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                     onClick={() => close(null)}
                     className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-muted"
                   >
-                    Cancel
+                    {t('dialogs.defaultCancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={!inputValue.trim()}
                     className="rounded-lg bg-panel-accent2 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
                   >
-                    {pending.confirmLabel ?? 'Confirm'}
+                    {pending.confirmLabel ?? t('dialogs.defaultConfirm')}
                   </button>
                 </div>
               </form>
@@ -109,7 +111,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                   onClick={() => close(false)}
                   className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-muted"
                 >
-                  {pending.cancelLabel ?? 'Cancel'}
+                  {pending.cancelLabel ?? t('dialogs.defaultCancel')}
                 </button>
                 <button
                   type="button"
@@ -121,7 +123,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                       : 'bg-panel-accent2 text-black hover:bg-panel-accent'
                   }`}
                 >
-                  {pending.confirmLabel ?? 'Confirm'}
+                  {pending.confirmLabel ?? t('dialogs.defaultConfirm')}
                 </button>
               </div>
             )}

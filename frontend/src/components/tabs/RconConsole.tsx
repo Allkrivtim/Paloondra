@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSocket } from '../../hooks/useSocket';
 import { RconLogEntry } from '../../types';
 
@@ -11,6 +12,7 @@ function makeId() {
 }
 
 export default function RconConsole() {
+  const { t } = useTranslation();
   const [log, setLog] = useState<RconLogEntry[]>([]);
   const [rconConnected, setRconConnected] = useState(false);
   const [input, setInput] = useState('');
@@ -77,8 +79,8 @@ export default function RconConsole() {
       <div className="flex items-center gap-2 text-sm">
         <span className={`h-2.5 w-2.5 rounded-full ${rconConnected ? 'bg-panel-accent' : 'bg-panel-danger'}`} />
         <span className="text-panel-muted">
-          RCON {rconConnected ? 'connected' : 'disconnected'}
-          {!connected && ' · reconnecting to panel...'}
+          {rconConnected ? t('rcon.connected') : t('rcon.disconnected')}
+          {!connected && t('rcon.reconnecting')}
         </span>
       </div>
 
@@ -86,14 +88,14 @@ export default function RconConsole() {
         ref={logRef}
         className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-panel-border bg-black/40 p-3 font-mono text-xs leading-relaxed"
       >
-        {log.length === 0 && <div className="text-panel-muted">No commands sent yet. Try "list" or "help".</div>}
+        {log.length === 0 && <div className="text-panel-muted">{t('rcon.noCommandsYet')}</div>}
         {log.map((entry) => (
           <div key={entry.id} className="mb-2">
             <div className="text-panel-accent">
               <span className="text-panel-muted">[{formatTime(entry.timestamp)}]</span> &gt; {entry.command}
             </div>
             {entry.response !== undefined && (
-              <div className="whitespace-pre-wrap pl-4 text-panel-text">{entry.response || '(empty response)'}</div>
+              <div className="whitespace-pre-wrap pl-4 text-panel-text">{entry.response || t('rcon.emptyResponse')}</div>
             )}
             {entry.error && <div className="whitespace-pre-wrap pl-4 text-panel-danger">{entry.error}</div>}
           </div>
@@ -106,7 +108,7 @@ export default function RconConsole() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           disabled={!connected}
-          placeholder={connected ? 'Enter RCON command...' : 'Reconnecting...'}
+          placeholder={connected ? t('rcon.placeholderConnected') : t('rcon.placeholderReconnecting')}
           className="flex-1 rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 font-mono text-sm text-panel-text outline-none focus:border-panel-accent disabled:opacity-50"
         />
         <button
@@ -114,7 +116,7 @@ export default function RconConsole() {
           disabled={!input.trim() || !connected}
           className="rounded-lg bg-panel-accent2 px-4 py-2 text-sm font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
         >
-          Send
+          {t('rcon.send')}
         </button>
       </div>
     </div>

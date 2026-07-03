@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import { getErrorMessage } from '../../api/errors';
 import { useSocket } from '../../hooks/useSocket';
@@ -20,8 +21,6 @@ import PlayerManagement from '../dashboard/PlayerManagement';
 import Broadcast from '../dashboard/Broadcast';
 import AuditLogPanel from '../dashboard/AuditLogPanel';
 
-const ACTION_LABELS: Record<ScriptName, string> = { start: 'Start', stop: 'Stop', restart: 'Restart' };
-
 const STATUS_POLL_MS = 5000;
 
 function formatTime(ts: number) {
@@ -29,6 +28,7 @@ function formatTime(ts: number) {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
   const [status, setStatus] = useState<ServerStatus | null>(null);
@@ -77,12 +77,9 @@ export default function Dashboard() {
   async function runAction(action: ScriptName) {
     if (action === 'stop' || action === 'restart') {
       const confirmed = await dialog.confirm({
-        title: `${ACTION_LABELS[action]} the server?`,
-        message:
-          action === 'stop'
-            ? 'This disconnects any players currently online.'
-            : 'This briefly disconnects any players currently online.',
-        confirmLabel: ACTION_LABELS[action],
+        title: action === 'stop' ? t('dashboard.stopConfirmTitle') : t('dashboard.restartConfirmTitle'),
+        message: action === 'stop' ? t('dashboard.stopConfirmMessage') : t('dashboard.restartConfirmMessage'),
+        confirmLabel: action === 'stop' ? t('dashboard.stop') : t('dashboard.restart'),
         danger: true,
       });
       if (!confirmed) return;
@@ -92,7 +89,7 @@ export default function Dashboard() {
     try {
       await api.post(`/server/${action}`);
     } catch (err) {
-      toast.error(getErrorMessage(err, `Failed to trigger ${action}`));
+      toast.error(getErrorMessage(err, t('dashboard.failedToTrigger', { action })));
     } finally {
       setTimeout(() => setBusyAction(null), 1500);
     }
@@ -122,11 +119,15 @@ export default function Dashboard() {
           )}
           <div>
             <div className="text-sm font-semibold text-panel-text">
-              {statusLoading ? 'Checking status...' : `Server is ${status?.online ? 'Online' : 'Offline'}`}
+              {statusLoading
+                ? t('dashboard.checkingStatus')
+                : status?.online
+                  ? t('dashboard.serverOnline')
+                  : t('dashboard.serverOffline')}
             </div>
             {!statusLoading && (
               <div className="text-xs text-panel-muted">
-                RCON: {status?.rconConnected ? 'connected' : 'disconnected'}
+                {status?.rconConnected ? t('dashboard.rconConnected') : t('dashboard.rconDisconnected')}
               </div>
             )}
           </div>
@@ -137,46 +138,46 @@ export default function Dashboard() {
             disabled={busyAction !== null}
             className="rounded-lg bg-panel-accent2 px-4 py-2 text-sm font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
           >
-            {busyAction === 'start' ? 'Starting...' : 'Start'}
+            {busyAction === 'start' ? t('dashboard.starting') : t('dashboard.start')}
           </button>
           <button
             onClick={() => runAction('restart')}
             disabled={busyAction !== null}
             className="rounded-lg border border-panel-warn text-panel-warn px-4 py-2 text-sm font-medium transition hover:bg-panel-warn/10 disabled:opacity-50"
           >
-            {busyAction === 'restart' ? 'Restarting...' : 'Restart'}
+            {busyAction === 'restart' ? t('dashboard.restarting') : t('dashboard.restart')}
           </button>
           <button
             onClick={() => runAction('stop')}
             disabled={busyAction !== null}
             className="rounded-lg border border-panel-danger text-panel-danger px-4 py-2 text-sm font-medium transition hover:bg-panel-danger/10 disabled:opacity-50"
           >
-            {busyAction === 'stop' ? 'Stopping...' : 'Stop'}
+            {busyAction === 'stop' ? t('dashboard.stopping') : t('dashboard.stop')}
           </button>
         </div>
       </section>
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label="Players Online"
-          value={latest?.players ? `${latest.players.online}${latest.players.max ? ` / ${latest.players.max}` : ''}` : '—'}
+          label={t('dashboard.playersOnline')}
+          value={latest?.players ? `${latest.players.online}${latest.players.max ? ` / ${latest.players.max}` : ''}` : t('common.emptyValue')}
           sub={latest?.players?.names.join(', ') || undefined}
         />
-        <StatCard label="TPS" value={latest?.tps != null ? latest.tps.toFixed(1) : '—'} />
-        <StatCard label="Host CPU" value={latest?.cpuLoadPct != null ? `${latest.cpuLoadPct}%` : '—'} />
+        <StatCard label={t('dashboard.tps')} value={latest?.tps != null ? latest.tps.toFixed(1) : t('common.emptyValue')} />
+        <StatCard label={t('dashboard.hostCpu')} value={latest?.cpuLoadPct != null ? `${latest.cpuLoadPct}%` : t('common.emptyValue')} />
         <StatCard
-          label="Host RAM"
+          label={t('dashboard.hostRam')}
           value={
             latest?.memUsedMB != null && latest?.memTotalMB != null
               ? `${latest.memUsedMB} / ${latest.memTotalMB} MB`
-              : '—'
+              : t('common.emptyValue')
           }
         />
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="relative rounded-xl border border-panel-border bg-panel-surface p-4">
-          <h2 className="mb-3 text-sm font-semibold text-panel-text">Players Online</h2>
+          <h2 className="mb-3 text-sm font-semibold text-panel-text">{t('dashboard.playersChartTitle')}</h2>
           {samples.length === 0 && <ChartEmptyState />}
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={chartData}>
@@ -190,7 +191,7 @@ export default function Dashboard() {
         </div>
 
         <div className="relative rounded-xl border border-panel-border bg-panel-surface p-4">
-          <h2 className="mb-3 text-sm font-semibold text-panel-text">Host Resource Usage (%)</h2>
+          <h2 className="mb-3 text-sm font-semibold text-panel-text">{t('dashboard.resourceChartTitle')}</h2>
           {samples.length === 0 && <ChartEmptyState />}
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={chartData}>
@@ -198,9 +199,9 @@ export default function Dashboard() {
               <XAxis dataKey="time" stroke="#9ca3af" fontSize={11} minTickGap={30} />
               <YAxis stroke="#9ca3af" fontSize={11} domain={[0, 100]} />
               <Tooltip contentStyle={{ background: '#161922', border: '1px solid #2a2f3d', fontSize: 12 }} />
-              <Line type="monotone" dataKey="cpu" name="CPU" stroke="#60a5fa" dot={false} strokeWidth={2} />
-              <Line type="monotone" dataKey="mem" name="RAM" stroke="#fbbf24" dot={false} strokeWidth={2} />
-              <Line type="monotone" dataKey="disk" name="Disk" stroke="#f87171" dot={false} strokeWidth={2} />
+              <Line type="monotone" dataKey="cpu" name={t('dashboard.chartCpu')} stroke="#60a5fa" dot={false} strokeWidth={2} />
+              <Line type="monotone" dataKey="mem" name={t('dashboard.chartRam')} stroke="#fbbf24" dot={false} strokeWidth={2} />
+              <Line type="monotone" dataKey="disk" name={t('dashboard.chartDisk')} stroke="#f87171" dot={false} strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -213,12 +214,12 @@ export default function Dashboard() {
       </section>
 
       <section className="rounded-xl border border-panel-border bg-panel-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold text-panel-text">Live Server Output</h2>
+        <h2 className="mb-3 text-sm font-semibold text-panel-text">{t('dashboard.liveOutput')}</h2>
         <div
           ref={logRef}
           className="h-56 overflow-y-auto rounded-lg bg-black/40 p-3 font-mono text-xs leading-relaxed"
         >
-          {logLines.length === 0 && <div className="text-panel-muted">No output yet.</div>}
+          {logLines.length === 0 && <div className="text-panel-muted">{t('dashboard.noOutputYet')}</div>}
           {logLines.map((l, i) => (
             <div
               key={i}
@@ -240,9 +241,10 @@ export default function Dashboard() {
 }
 
 function ChartEmptyState() {
+  const { t } = useTranslation();
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-xs text-panel-muted">
-      Waiting for the first metrics sample...
+      {t('dashboard.waitingForMetrics')}
     </div>
   );
 }

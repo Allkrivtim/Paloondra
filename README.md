@@ -33,11 +33,12 @@ the short version, skip to [Quick start](#quick-start).
 8. [Backups](#backups)
 9. [server.properties editor](#serverproperties-editor)
 10. [Audit log](#audit-log)
-11. [Running in production](#running-in-production)
-12. [Running with systemd](#running-with-systemd)
-13. [Docker](#docker)
-14. [Development mode](#development-mode)
-15. [Troubleshooting](#troubleshooting)
+11. [Localization](#localization)
+12. [Running in production](#running-in-production)
+13. [Running with systemd](#running-with-systemd)
+14. [Docker](#docker)
+15. [Development mode](#development-mode)
+16. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -497,6 +498,37 @@ same local-to-the-backend storage the scheduler uses - see
 
 ---
 
+## Localization
+
+The UI ships in **English and Russian**, via
+[react-i18next](https://react.i18next.com/). Every tab, toast, confirmation
+dialog, banner, and empty/loading state is translated - there's no
+hardcoded UI text left in either language. Technical terms (RCON, SSH,
+SFTP, plugin/mod names, cron, MOTD, TPS, CPU, RAM) are kept as-is in both
+languages, matching how they're normally used even in Russian-language
+admin tooling.
+
+A language switcher sits in the header, next to the username/logout button.
+Switching is instant (no page reload) and the choice is remembered in the
+browser's `localStorage` (`paloondra.language`) - this is purely a
+client-side display preference, unrelated to and stored separately from
+the backend's `.env` connection config. On first visit (nothing in
+`localStorage` yet), the language is detected from the browser and falls
+back to English if it isn't Russian.
+
+Translation strings live in `frontend/src/i18n/locales/en.json` and
+`ru.json` (mirrored key structure - `frontend/src/i18n/index.ts` sets up
+the `i18next-browser-languagedetector` for the localStorage/browser
+detection above). Error messages returned by the backend (e.g. an SSH or
+RCON exception's raw text) are shown as-is in English regardless of the
+selected UI language - only the panel's own fallback messages, labels, and
+copy are translated. This is a deliberate choice: backend errors are
+often literal exception text (`ECONNREFUSED`, stack-trace fragments) that
+isn't meaningful to translate, so the two are kept clearly distinct rather
+than half-translating error strings inconsistently.
+
+---
+
 ## Running in production
 
 ### Build the frontend
@@ -901,7 +933,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 | **RCON Console** | Command input with history (↑/↓), live output log, auto-reconnect |
 | **SSH Terminal** | Full interactive shell (xterm.js + ssh2 PTY), resizable, auto-reconnects a fresh session if the connection drops |
 | **File Manager** | SFTP (or sudo-mode) browser: navigate, upload/download, rename, delete, mkdir, drag & drop (upload from OS, move between folders), built-in Monaco editor for text files |
-| **Plugins & Mods** | Installed plugins (enable/disable/delete/download, real names parsed from `plugin.yml`), install by URL or drag-and-drop `.jar`, and a Modrinth-backed plugin store with search/filters/install - see [Plugins & the plugin store](#plugins--the-plugin-store) |
+| **Plugins & Mods** | Installed plugins (enable/disable/delete/download, real names parsed from `plugin.yml`), install by URL or drag-and-drop `.jar`, and a Modrinth-backed plugin store with search/filters/install - see [Plugins & the plugin store](#plugins--the-plugin-store). A banner at the top makes clear only plugins are supported; mod support isn't available yet |
 | **Backups** | Trigger `BACKUP_SCRIPT`, list/download/delete what it produces - see [Backups](#backups) |
 | **Scheduled Tasks** | Cron-scheduled restarts or RCON commands, editable list, run-now - see [Scheduled tasks](#scheduled-tasks) |
 | **Server Config** | Friendly form + raw-text editor for `server.properties` - see [server.properties editor](#serverproperties-editor) |

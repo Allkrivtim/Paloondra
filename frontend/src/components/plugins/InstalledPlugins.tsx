@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { useTranslation } from 'react-i18next';
 import {
   deletePlugin,
   installPluginFromFile,
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function InstalledPlugins({ onChanged }: Props) {
+  const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
@@ -36,11 +38,11 @@ export default function InstalledPlugins({ onChanged }: Props) {
     try {
       setPlugins(await listPlugins());
     } catch (err) {
-      setLoadError(getErrorMessage(err, 'Failed to load plugins'));
+      setLoadError(getErrorMessage(err, t('plugins.failedToLoadPlugins')));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refresh();
@@ -63,31 +65,33 @@ export default function InstalledPlugins({ onChanged }: Props) {
     await withBusy(plugin.filename, async () => {
       try {
         await togglePlugin(plugin.filename, !plugin.enabled);
-        toast.success(`${plugin.enabled ? 'Disabled' : 'Enabled'} "${plugin.name ?? plugin.filename}"`);
+        const name = plugin.name ?? plugin.filename;
+        toast.success(plugin.enabled ? t('plugins.disabledToast', { name }) : t('plugins.enabledToast', { name }));
         onChanged();
         await refresh();
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to toggle plugin'));
+        toast.error(getErrorMessage(err, t('plugins.failedToToggle')));
       }
     });
   }
 
   async function handleDelete(plugin: PluginInfo) {
+    const name = plugin.name ?? plugin.filename;
     const confirmed = await dialog.confirm({
-      title: `Delete "${plugin.name ?? plugin.filename}"?`,
-      message: 'This removes the .jar from the server. This cannot be undone.',
-      confirmLabel: 'Delete',
+      title: t('plugins.deleteTitle', { name }),
+      message: t('plugins.deleteMessage'),
+      confirmLabel: t('common.delete'),
       danger: true,
     });
     if (!confirmed) return;
     await withBusy(plugin.filename, async () => {
       try {
         await deletePlugin(plugin.filename);
-        toast.success(`Deleted "${plugin.name ?? plugin.filename}"`);
+        toast.success(t('plugins.deletedToast', { name }));
         onChanged();
         await refresh();
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to delete plugin'));
+        toast.error(getErrorMessage(err, t('plugins.failedToDelete')));
       }
     });
   }
@@ -96,7 +100,7 @@ export default function InstalledPlugins({ onChanged }: Props) {
     try {
       await downloadFile(plugin.path, plugin.filename);
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to download plugin'));
+      toast.error(getErrorMessage(err, t('plugins.failedToDownload')));
     }
   }
 
@@ -106,12 +110,12 @@ export default function InstalledPlugins({ onChanged }: Props) {
     setInstallingUrl(true);
     try {
       const plugin = await installPluginFromUrl(urlInput.trim());
-      toast.success(`Installed "${plugin.name ?? plugin.filename}"`);
+      toast.success(t('plugins.installedToast', { name: plugin.name ?? plugin.filename }));
       setUrlInput('');
       onChanged();
       await refresh();
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to install plugin'));
+      toast.error(getErrorMessage(err, t('plugins.failedToInstall')));
     } finally {
       setInstallingUrl(false);
     }
@@ -123,17 +127,17 @@ export default function InstalledPlugins({ onChanged }: Props) {
         setUploadProgress(0);
         try {
           const plugin = await installPluginFromFile(file, setUploadProgress);
-          toast.success(`Installed "${plugin.name ?? plugin.filename}"`);
+          toast.success(t('plugins.installedToast', { name: plugin.name ?? plugin.filename }));
           onChanged();
         } catch (err) {
-          toast.error(getErrorMessage(err, `Failed to install "${file.name}"`));
+          toast.error(getErrorMessage(err, t('plugins.failedToInstallNamed', { name: file.name })));
         } finally {
           setUploadProgress(null);
         }
       }
       await refresh();
     },
-    [onChanged, refresh, toast],
+    [onChanged, refresh, toast, t],
   );
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -150,12 +154,12 @@ export default function InstalledPlugins({ onChanged }: Props) {
           onSubmit={handleInstallUrl}
           className="rounded-xl border border-panel-border bg-panel-surface p-4"
         >
-          <h3 className="mb-2 text-sm font-semibold text-panel-text">Install by URL</h3>
+          <h3 className="mb-2 text-sm font-semibold text-panel-text">{t('plugins.installByUrl')}</h3>
           <div className="flex gap-2">
             <input
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="https://example.com/plugin.jar"
+              placeholder={t('plugins.installByUrlPlaceholder')}
               className="flex-1 rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 text-sm text-panel-text outline-none focus:border-panel-accent"
             />
             <button
@@ -164,7 +168,7 @@ export default function InstalledPlugins({ onChanged }: Props) {
               className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-panel-accent2 px-3 py-2 text-sm font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
             >
               {installingUrl && <Spinner className="h-3.5 w-3.5 text-black" />}
-              Install
+              {t('plugins.install')}
             </button>
           </div>
         </form>
@@ -176,16 +180,16 @@ export default function InstalledPlugins({ onChanged }: Props) {
           }`}
         >
           <input {...getInputProps()} />
-          <h3 className="text-sm font-semibold text-panel-text">Install by file</h3>
+          <h3 className="text-sm font-semibold text-panel-text">{t('plugins.installByFile')}</h3>
           {uploadProgress !== null ? (
             <div className="flex items-center gap-2 text-xs text-panel-muted">
-              <Spinner className="h-3.5 w-3.5" /> Uploading... {uploadProgress}%
+              <Spinner className="h-3.5 w-3.5" /> {t('plugins.uploading', { progress: uploadProgress })}
             </div>
           ) : (
             <p className="text-xs text-panel-muted">
-              Drag a .jar here, or{' '}
+              {t('plugins.dropOrBrowse')}{' '}
               <button onClick={open} className="text-panel-accent underline">
-                browse
+                {t('plugins.browse')}
               </button>
             </p>
           )}
@@ -195,7 +199,7 @@ export default function InstalledPlugins({ onChanged }: Props) {
       <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-panel-border bg-panel-surface">
         {loading && (
           <div className="flex items-center justify-center gap-2 py-16 text-panel-muted">
-            <Spinner /> Loading plugins...
+            <Spinner /> {t('plugins.loadingPlugins')}
           </div>
         )}
 
@@ -207,7 +211,7 @@ export default function InstalledPlugins({ onChanged }: Props) {
               onClick={refresh}
               className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-accent hover:text-panel-accent"
             >
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -215,8 +219,8 @@ export default function InstalledPlugins({ onChanged }: Props) {
         {!loading && !loadError && plugins.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-center text-panel-muted">
             <span className="text-3xl">🧩</span>
-            <p className="text-sm">No plugins installed</p>
-            <p className="text-xs">Install one above, or browse the Store tab.</p>
+            <p className="text-sm">{t('plugins.noPluginsTitle')}</p>
+            <p className="text-xs">{t('plugins.noPluginsHint')}</p>
           </div>
         )}
 
@@ -224,13 +228,13 @@ export default function InstalledPlugins({ onChanged }: Props) {
           <table className="w-full text-left text-sm">
             <thead className="sticky top-0 bg-panel-surface2 text-xs uppercase tracking-wide text-panel-muted">
               <tr>
-                <th className="px-4 py-2 font-medium">Plugin</th>
-                <th className="px-4 py-2 font-medium">Version</th>
-                <th className="px-4 py-2 font-medium">Author</th>
-                <th className="px-4 py-2 font-medium">Size</th>
-                <th className="px-4 py-2 font-medium">Modified</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium text-right">Actions</th>
+                <th className="px-4 py-2 font-medium">{t('plugins.columnPlugin')}</th>
+                <th className="px-4 py-2 font-medium">{t('plugins.columnVersion')}</th>
+                <th className="px-4 py-2 font-medium">{t('plugins.columnAuthor')}</th>
+                <th className="px-4 py-2 font-medium">{t('plugins.columnSize')}</th>
+                <th className="px-4 py-2 font-medium">{t('plugins.columnModified')}</th>
+                <th className="px-4 py-2 font-medium">{t('plugins.columnStatus')}</th>
+                <th className="px-4 py-2 font-medium text-right">{t('plugins.columnActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -255,8 +259,8 @@ export default function InstalledPlugins({ onChanged }: Props) {
                         {isBusy && <Spinner className="h-3 w-3" />}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-panel-muted">{plugin.version ?? '—'}</td>
-                    <td className="px-4 py-2 text-panel-muted">{plugin.author ?? '—'}</td>
+                    <td className="px-4 py-2 text-panel-muted">{plugin.version ?? t('common.emptyValue')}</td>
+                    <td className="px-4 py-2 text-panel-muted">{plugin.author ?? t('common.emptyValue')}</td>
                     <td className="px-4 py-2 text-panel-muted">{formatBytes(plugin.size)}</td>
                     <td className="px-4 py-2 text-panel-muted">{formatDate(plugin.modifiedAt)}</td>
                     <td className="px-4 py-2">
@@ -267,7 +271,7 @@ export default function InstalledPlugins({ onChanged }: Props) {
                             : 'bg-panel-muted/10 text-panel-muted'
                         }`}
                       >
-                        {plugin.enabled ? 'Enabled' : 'Disabled'}
+                        {plugin.enabled ? t('common.enabled') : t('common.disabled')}
                       </span>
                     </td>
                     <td className="px-4 py-2">
@@ -277,21 +281,21 @@ export default function InstalledPlugins({ onChanged }: Props) {
                           disabled={isBusy}
                           className="text-panel-muted hover:text-panel-accent disabled:opacity-50"
                         >
-                          {plugin.enabled ? 'Disable' : 'Enable'}
+                          {plugin.enabled ? t('plugins.disable') : t('plugins.enable')}
                         </button>
                         <button
                           onClick={() => handleDownload(plugin)}
                           disabled={isBusy}
                           className="text-panel-muted hover:text-panel-accent disabled:opacity-50"
                         >
-                          Download
+                          {t('plugins.download')}
                         </button>
                         <button
                           onClick={() => handleDelete(plugin)}
                           disabled={isBusy}
                           className="text-panel-muted hover:text-panel-danger disabled:opacity-50"
                         >
-                          Delete
+                          {t('plugins.delete')}
                         </button>
                       </div>
                     </td>

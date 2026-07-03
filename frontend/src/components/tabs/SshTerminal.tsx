@@ -2,24 +2,26 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+import { useTranslation } from 'react-i18next';
 import { useSocket } from '../../hooks/useSocket';
 
 export default function SshTerminal() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const sendRef = useRef<((data: object) => boolean) | null>(null);
-  const [status, setStatus] = useState('Connecting...');
+  const [status, setStatus] = useState(t('ssh.connecting'));
 
   const onMessage = useCallback((msg: any) => {
     if (msg.type === 'data') {
       termRef.current?.write(msg.data);
     } else if (msg.type === 'status') {
-      setStatus(msg.connected ? 'Connected' : msg.message ?? 'Disconnected');
+      setStatus(msg.connected ? t('ssh.connected') : msg.message ?? t('ssh.disconnected'));
     } else if (msg.type === 'error') {
       termRef.current?.write(`\r\n\x1b[31m${msg.message}\x1b[0m\r\n`);
     }
-  }, []);
+  }, [t]);
 
   const { connected, send } = useSocket('/ws/ssh', onMessage);
   sendRef.current = send;

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../context/ToastContext';
 import { getErrorMessage } from '../../api/errors';
 import { api } from '../../api/client';
@@ -9,6 +10,7 @@ import RestartBanner from '../plugins/RestartBanner';
 type SubTab = 'installed' | 'store';
 
 export default function Plugins() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [subTab, setSubTab] = useState<SubTab>('installed');
   const [needsRestart, setNeedsRestart] = useState(false);
@@ -18,10 +20,10 @@ export default function Plugins() {
     setRestarting(true);
     try {
       await api.post('/server/restart');
-      toast.success('Restart triggered - see Dashboard for live output');
+      toast.success(t('plugins.restartTriggered'));
       setNeedsRestart(false);
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to trigger restart'));
+      toast.error(getErrorMessage(err, t('plugins.failedToTriggerRestart')));
     } finally {
       setRestarting(false);
     }
@@ -32,6 +34,11 @@ export default function Plugins() {
       {needsRestart && (
         <RestartBanner onRestart={handleRestart} restarting={restarting} onDismiss={() => setNeedsRestart(false)} />
       )}
+
+      <div className="flex items-center gap-2 rounded-xl border border-panel-border/60 bg-panel-surface2/60 px-4 py-2.5 text-sm text-panel-muted">
+        <span>ℹ️</span>
+        <span>{t('plugins.modsNotice')}</span>
+      </div>
 
       <div className="flex gap-1 border-b border-panel-border">
         {(['installed', 'store'] as const).map((tab) => (
@@ -44,7 +51,7 @@ export default function Plugins() {
                 : 'border-transparent text-panel-muted hover:text-panel-text'
             }`}
           >
-            {tab === 'installed' ? 'Installed' : 'Store'}
+            {tab === 'installed' ? t('plugins.tabInstalled') : t('plugins.tabStore')}
           </button>
         ))}
       </div>

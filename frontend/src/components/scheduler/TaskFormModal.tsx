@@ -1,15 +1,7 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScheduledTask, ScheduledTaskInput, ScheduledTaskType } from '../../types';
 import Spinner from '../common/Spinner';
-
-const PRESETS: Array<{ label: string; value: string }> = [
-  { label: 'Custom...', value: '' },
-  { label: 'Every hour', value: '0 * * * *' },
-  { label: 'Every day at midnight', value: '0 0 * * *' },
-  { label: 'Every day at 4am', value: '0 4 * * *' },
-  { label: 'Every 30 minutes', value: '*/30 * * * *' },
-  { label: 'Every Sunday at 3am', value: '0 3 * * 0' },
-];
 
 interface Props {
   initial?: ScheduledTask;
@@ -18,6 +10,17 @@ interface Props {
 }
 
 export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
+  const { t } = useTranslation();
+
+  const PRESETS: Array<{ label: string; value: string }> = [
+    { label: t('taskForm.presetCustom'), value: '' },
+    { label: t('taskForm.presetHourly'), value: '0 * * * *' },
+    { label: t('taskForm.presetMidnight'), value: '0 0 * * *' },
+    { label: t('taskForm.preset4am'), value: '0 4 * * *' },
+    { label: t('taskForm.preset30min'), value: '*/30 * * * *' },
+    { label: t('taskForm.presetSunday3am'), value: '0 3 * * 0' },
+  ];
+
   const [name, setName] = useState(initial?.name ?? '');
   const [schedule, setSchedule] = useState(initial?.schedule ?? '');
   const [type, setType] = useState<ScheduledTaskType>(initial?.type ?? 'restart');
@@ -33,7 +36,7 @@ export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
     try {
       await onSubmit({ name: name.trim(), schedule: schedule.trim(), type, command: command.trim() || null, enabled });
     } catch (err: any) {
-      setError(err?.response?.data?.error ?? err?.message ?? 'Failed to save task');
+      setError(err?.response?.data?.error ?? err?.message ?? t('taskForm.failedToSave'));
       setSubmitting(false);
       return;
     }
@@ -47,19 +50,19 @@ export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
         className="dialog-enter w-full max-w-md rounded-xl border border-panel-border bg-panel-surface p-5 shadow-2xl"
       >
         <h2 className="mb-4 text-sm font-semibold text-panel-text">
-          {initial ? 'Edit scheduled task' : 'New scheduled task'}
+          {initial ? t('taskForm.editTitle') : t('taskForm.newTitle')}
         </h2>
 
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">Name</label>
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">{t('taskForm.nameLabel')}</label>
         <input
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nightly restart"
+          placeholder={t('taskForm.namePlaceholder')}
           className="mb-3 w-full rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 text-sm text-panel-text outline-none focus:border-panel-accent"
         />
 
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">Preset</label>
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">{t('taskForm.presetLabel')}</label>
         <select
           onChange={(e) => e.target.value && setSchedule(e.target.value)}
           defaultValue=""
@@ -73,7 +76,7 @@ export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
         </select>
 
         <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">
-          Cron schedule
+          {t('taskForm.cronLabel')}
         </label>
         <input
           value={schedule}
@@ -81,11 +84,9 @@ export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
           placeholder="0 4 * * *"
           className="mb-1 w-full rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 font-mono text-sm text-panel-text outline-none focus:border-panel-accent"
         />
-        <p className="mb-3 text-xs text-panel-muted">
-          Standard 5-field cron (minute hour day month weekday), evaluated in the backend's local timezone.
-        </p>
+        <p className="mb-3 text-xs text-panel-muted">{t('taskForm.cronHint')}</p>
 
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">Action</label>
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">{t('taskForm.actionLabel')}</label>
         <div className="mb-3 flex gap-2">
           <button
             type="button"
@@ -96,7 +97,7 @@ export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
                 : 'border-panel-border text-panel-muted hover:text-panel-text'
             }`}
           >
-            Restart server
+            {t('taskForm.restartServer')}
           </button>
           <button
             type="button"
@@ -107,19 +108,19 @@ export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
                 : 'border-panel-border text-panel-muted hover:text-panel-text'
             }`}
           >
-            RCON command
+            {t('taskForm.rconCommand')}
           </button>
         </div>
 
         {type === 'rcon' && (
           <>
             <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-panel-muted">
-              RCON command
+              {t('taskForm.rconCommand')}
             </label>
             <input
               value={command}
               onChange={(e) => setCommand(e.target.value)}
-              placeholder="say Server restarting in 5 minutes"
+              placeholder={t('taskForm.rconCommandPlaceholder')}
               className="mb-3 w-full rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 font-mono text-sm text-panel-text outline-none focus:border-panel-accent"
             />
           </>
@@ -132,7 +133,7 @@ export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
             onChange={(e) => setEnabled(e.target.checked)}
             className="h-4 w-4 rounded border-panel-border accent-panel-accent2"
           />
-          Enabled
+          {t('taskForm.enabledLabel')}
         </label>
 
         {error && (
@@ -147,7 +148,7 @@ export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
             onClick={onCancel}
             className="rounded-lg border border-panel-border px-3 py-1.5 text-xs font-medium text-panel-text transition hover:border-panel-muted"
           >
-            Cancel
+            {t('taskForm.cancel')}
           </button>
           <button
             type="submit"
@@ -155,7 +156,7 @@ export default function TaskFormModal({ initial, onCancel, onSubmit }: Props) {
             className="flex items-center gap-1.5 rounded-lg bg-panel-accent2 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
           >
             {submitting && <Spinner className="h-3 w-3 text-black" />}
-            {initial ? 'Save' : 'Create'}
+            {initial ? t('taskForm.save') : t('taskForm.create')}
           </button>
         </div>
       </form>
