@@ -354,7 +354,260 @@
     "invalidYaml": "Некорректный YAML: {{error}}",
     "restartRequiredMessage": "Изменения в bukkit.yml / spigot.yml вступят в силу только после полного перезапуска сервера.",
     "restartTriggered": "Перезапуск запущен — вывод смотрите на панели управления",
-    "failedToTriggerRestart": "Не удалось запустить перезапуск"
+    "failedToTriggerRestart": "Не удалось запустить перезапуск",
+    "usingDefault": "Используется значение по умолчанию",
+    "otherKeysNotice": "Ключи, не перечисленные здесь, остаются в файле без изменений - при необходимости отредактируйте их в режиме \"Исходный текст\".",
+    "sections": {
+      "bukkit": {
+        "settings": "Настройки",
+        "spawn-limits": "Лимиты спавна",
+        "chunk-gc": "Сборка мусора чанков",
+        "ticks-per": "Интервалы спавна/сохранения"
+      },
+      "spigot": {
+        "settings": "Настройки",
+        "messages": "Сообщения",
+        "world-settings": "Настройки мира (по умолчанию)"
+      }
+    },
+    "fields": {
+      "bukkit": {
+        "settings__allow-end": {
+          "label": "Разрешить Энд",
+          "description": "Разрешено ли игрокам перемещаться в измерение Энд."
+        },
+        "settings__warn-on-overload": {
+          "label": "Предупреждать о перегрузке",
+          "description": "Записывать в лог предупреждение, если сервер не успевает за тактами."
+        },
+        "settings__permissions-file": {
+          "label": "Файл прав доступа",
+          "description": "Имя файла с правами доступа, загружаемого при старте Bukkit."
+        },
+        "settings__update-folder": {
+          "label": "Папка обновлений",
+          "description": "Папка, куда складываются обновления плагинов до следующего перезапуска."
+        },
+        "settings__plugin-profiling": {
+          "label": "Профилирование плагинов",
+          "description": "Отслеживать затраты CPU по плагинам для отчёта /timings."
+        },
+        "settings__connection-throttle": {
+          "label": "Ограничение подключений",
+          "description": "Минимальный интервал (мс) между попытками подключения с одного IP."
+        },
+        "settings__query-plugins": {
+          "label": "Список плагинов в query",
+          "description": "Включать список плагинов в ответ на GameSpy4 query."
+        },
+        "settings__deprecated-verbose": {
+          "label": "Предупреждения об устаревшем API",
+          "description": "Насколько подробно логировать использование устаревших событий Bukkit API."
+        },
+        "settings__shutdown-message": {
+          "label": "Сообщение при остановке",
+          "description": "Сообщение, отправляемое игрокам при остановке сервера."
+        },
+        "settings__minimum-api": {
+          "label": "Минимальная версия API",
+          "description": "Самая старая версия Bukkit API, на которую могут ориентироваться плагины."
+        },
+        "spawn-limits__monsters": {
+          "label": "Лимит спавна монстров",
+          "description": "Максимум враждебных мобов в мире."
+        },
+        "spawn-limits__animals": {
+          "label": "Лимит спавна животных",
+          "description": "Максимум наземных пассивных животных в мире."
+        },
+        "spawn-limits__water-animals": {
+          "label": "Лимит спавна водных животных",
+          "description": "Максимум мобов типа кальмаров/рыб в мире."
+        },
+        "spawn-limits__water-ambient": {
+          "label": "Лимит фоновых водных мобов",
+          "description": "Максимум фоновых водных мобов (треска, лосось и т.п.) в мире."
+        },
+        "spawn-limits__water-underground-creature": {
+          "label": "Лимит подземных водных существ",
+          "description": "Максимум светящихся кальмаров и похожих подземных водных мобов в мире."
+        },
+        "spawn-limits__axolotls": {
+          "label": "Лимит спавна аксолотлей",
+          "description": "Максимум аксолотлей в мире."
+        },
+        "spawn-limits__ambient": {
+          "label": "Лимит фоновых мобов",
+          "description": "Максимум фоновых мобов вроде летучих мышей в мире."
+        },
+        "chunk-gc__period-in-ticks": {
+          "label": "Период сборки чанков",
+          "description": "Как часто (в тиках) проверяются неиспользуемые чанки для выгрузки."
+        },
+        "ticks-per__animal-spawns": {
+          "label": "Интервал спавна животных",
+          "description": "Тики между попытками спавна животных (больше — реже)."
+        },
+        "ticks-per__monster-spawns": {
+          "label": "Интервал спавна монстров",
+          "description": "Тики между попытками спавна монстров."
+        },
+        "ticks-per__water-spawns": {
+          "label": "Интервал спавна водных мобов",
+          "description": "Тики между попытками спавна водных мобов."
+        },
+        "ticks-per__water-ambient-spawns": {
+          "label": "Интервал спавна фоновых водных мобов",
+          "description": "Тики между попытками спавна фоновых водных мобов."
+        },
+        "ticks-per__water-underground-creature-spawns": {
+          "label": "Интервал спавна подземных водных существ",
+          "description": "Тики между попытками спавна подземных водных мобов."
+        },
+        "ticks-per__ambient-spawns": {
+          "label": "Интервал спавна фоновых мобов",
+          "description": "Тики между попытками спавна фоновых мобов."
+        },
+        "ticks-per__autosave": {
+          "label": "Интервал автосохранения",
+          "description": "Тики между автоматическими сохранениями мира."
+        }
+      },
+      "spigot": {
+        "settings__bungeecord": {
+          "label": "Поддержка BungeeCord",
+          "description": "Включить IP forwarding для работы за прокси BungeeCord/Velocity."
+        },
+        "settings__restart-on-crash": {
+          "label": "Перезапуск при сбое",
+          "description": "Автоматически запускать скрипт перезапуска при падении сервера."
+        },
+        "settings__restart-script": {
+          "label": "Скрипт перезапуска",
+          "description": "Путь к скрипту, запускаемому при перезапуске после сбоя."
+        },
+        "settings__netty-threads": {
+          "label": "Потоки Netty",
+          "description": "Количество потоков сетевого ввода-вывода."
+        },
+        "settings__player-shuffle": {
+          "label": "Перемешивание списка игроков",
+          "description": "Интервал (в тиках) перемешивания порядка списка игроков; 0 отключает."
+        },
+        "settings__user-cache-size": {
+          "label": "Размер кэша пользователей",
+          "description": "Количество пар имя/UUID, хранимых в usercache.json."
+        },
+        "settings__sample-count": {
+          "label": "Количество замеров TPS",
+          "description": "Сколько замеров усредняется для отображаемого TPS."
+        },
+        "messages__whitelist": {
+          "label": "Сообщение о вайтлисте",
+          "description": "Показывается игроку, не прошедшему проверку вайтлиста."
+        },
+        "messages__unknown-command": {
+          "label": "Сообщение о неизвестной команде",
+          "description": "Показывается при вводе несуществующей команды."
+        },
+        "messages__server-full": {
+          "label": "Сообщение о заполненном сервере",
+          "description": "Показывается при попытке зайти на полный сервер."
+        },
+        "messages__outdated-client": {
+          "label": "Сообщение об устаревшем клиенте",
+          "description": "Показывается, если версия клиента игрока слишком старая. {0} заменяется на требуемую версию."
+        },
+        "messages__outdated-server": {
+          "label": "Сообщение об устаревшем сервере",
+          "description": "Показывается, если клиент игрока новее сервера. {0} заменяется на версию сервера."
+        },
+        "messages__restart": {
+          "label": "Сообщение о перезапуске",
+          "description": "Показывается игрокам при перезапуске сервера."
+        },
+        "world-settings__default__view-distance": {
+          "label": "Дальность прорисовки",
+          "description": "Сколько чанков вокруг игрока отправляется клиенту; -1 или «default» — использовать значение из server.properties."
+        },
+        "world-settings__default__simulation-distance": {
+          "label": "Дальность симуляции",
+          "description": "Сколько чанков вокруг игрока активно тикается; -1 или «default» — использовать значение из server.properties."
+        },
+        "world-settings__default__mob-spawn-range": {
+          "label": "Радиус спавна мобов",
+          "description": "Радиус в чанках вокруг игрока, где могут спавниться мобы."
+        },
+        "world-settings__default__chunks-per-tick": {
+          "label": "Чанков за тик",
+          "description": "Сколько чанков обрабатывается для случайных тиков за один тик."
+        },
+        "world-settings__default__item-despawn-rate": {
+          "label": "Скорость исчезновения предметов",
+          "description": "Тики до исчезновения выброшенного предмета."
+        },
+        "world-settings__default__arrow-despawn-rate": {
+          "label": "Скорость исчезновения стрел",
+          "description": "Тики до исчезновения застрявшей стрелы."
+        },
+        "world-settings__default__nerf-spawner-mobs": {
+          "label": "Ослаблять мобов из спавнеров",
+          "description": "Отключать ИИ у мобов, заспавненных спавнерами."
+        },
+        "world-settings__default__merge-radius__exp": {
+          "label": "Радиус слияния опыта",
+          "description": "Расстояние (в блоках), в пределах которого сферы опыта сливаются друг с другом."
+        },
+        "world-settings__default__merge-radius__item": {
+          "label": "Радиус слияния предметов",
+          "description": "Расстояние (в блоках), в пределах которого выброшенные предметы сливаются друг с другом."
+        },
+        "world-settings__default__entity-activation-range__animals": {
+          "label": "Радиус активации животных",
+          "description": "Расстояние (в блоках) от игрока, на котором животные остаются активными."
+        },
+        "world-settings__default__entity-activation-range__monsters": {
+          "label": "Радиус активации монстров",
+          "description": "Расстояние (в блоках) от игрока, на котором монстры остаются активными."
+        },
+        "world-settings__default__entity-activation-range__raiders": {
+          "label": "Радиус активации рейдеров",
+          "description": "Расстояние (в блоках) от игрока, на котором мобы рейдов остаются активными."
+        },
+        "world-settings__default__entity-activation-range__misc": {
+          "label": "Радиус активации прочих существ",
+          "description": "Расстояние (в блоках) от игрока, на котором прочие существа остаются активными."
+        },
+        "world-settings__default__entity-activation-range__water": {
+          "label": "Радиус активации водных существ",
+          "description": "Расстояние (в блоках) от игрока, на котором водные мобы остаются активными."
+        },
+        "world-settings__default__entity-activation-range__villagers": {
+          "label": "Радиус активации жителей",
+          "description": "Расстояние (в блоках) от игрока, на котором жители остаются активными."
+        },
+        "world-settings__default__entity-tracking-range__players": {
+          "label": "Радиус отслеживания игроков",
+          "description": "Расстояние (в блоках), на котором игроки видны друг другу."
+        },
+        "world-settings__default__entity-tracking-range__animals": {
+          "label": "Радиус отслеживания животных",
+          "description": "Расстояние (в блоках), на котором отслеживаются животные."
+        },
+        "world-settings__default__entity-tracking-range__monsters": {
+          "label": "Радиус отслеживания монстров",
+          "description": "Расстояние (в блоках), на котором отслеживаются монстры."
+        },
+        "world-settings__default__entity-tracking-range__misc": {
+          "label": "Радиус отслеживания прочих существ",
+          "description": "Расстояние (в блоках), на котором отслеживаются прочие существа."
+        },
+        "world-settings__default__entity-tracking-range__other": {
+          "label": "Радиус отслеживания прочего",
+          "description": "Расстояние (в блоках), на котором отслеживаются прочие типы сущностей."
+        }
+      }
+    }
   },
   "whitelist": {
     "title": "Вайтлист",
