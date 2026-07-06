@@ -120,3 +120,34 @@ export interface BackupInfo {
   size: number;
   modifiedAt: number;
 }
+
+// ---------------------------------------------------------------------------
+// Server Config: bukkit.yml / spigot.yml
+// ---------------------------------------------------------------------------
+
+export type ServerFileKey = 'bukkit' | 'spigot';
+
+// ---------------------------------------------------------------------------
+// Whitelist
+// ---------------------------------------------------------------------------
+
+export interface WhitelistEntry {
+  uuid: string;
+  name: string;
+}
+
+export interface WhitelistDocument {
+  enabled: boolean;
+  entries: WhitelistEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// Ops
+// ---------------------------------------------------------------------------
+
+export interface OpEntry {
+  uuid: string;
+  name: string;
+  level: number;
+  bypassesPlayerLimit: boolean;
+}

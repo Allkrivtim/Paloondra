@@ -5,7 +5,7 @@ import { getErrorMessage } from '../../api/errors';
 import { api } from '../../api/client';
 import InstalledPlugins from '../plugins/InstalledPlugins';
 import PluginStore from '../plugins/PluginStore';
-import RestartBanner from '../plugins/RestartBanner';
+import RestartBanner from '../common/RestartBanner';
 
 type SubTab = 'installed' | 'store';
 
@@ -32,7 +32,12 @@ export default function Plugins() {
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-6">
       {needsRestart && (
-        <RestartBanner onRestart={handleRestart} restarting={restarting} onDismiss={() => setNeedsRestart(false)} />
+        <RestartBanner
+          message={t('plugins.restartBannerMessage')}
+          onRestart={handleRestart}
+          restarting={restarting}
+          onDismiss={() => setNeedsRestart(false)}
+        />
       )}
 
       <div className="flex items-center gap-2 rounded-xl border border-panel-border/60 bg-panel-surface2/60 px-4 py-2.5 text-sm text-panel-muted">

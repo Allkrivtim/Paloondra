@@ -7,7 +7,7 @@ these external channels:
 - **Shell scripts** (`START_SCRIPT` / `STOP_SCRIPT` / `RESTART_SCRIPT` / `BACKUP_SCRIPT`), run over the same SSH connection as the terminal, from inside `SCRIPTS_DIR` on the target server
 - **RCON** (`rcon-client`) for in-game commands, the player list, quick moderation actions, broadcasts, and scheduled RCON tasks
 - **SSH** (`ssh2`) for the interactive terminal and host metrics (`top`/`free`/`df`)
-- **SFTP** (`ssh2`'s SFTP subsystem, or `sudo` over SSH exec) for the file manager, the plugins list, backups, and the server.properties editor
+- **SFTP** (`ssh2`'s SFTP subsystem, or `sudo` over SSH exec) for the file manager, the plugins list, backups, the server.properties/bukkit.yml/spigot.yml editors, and reading whitelist.json/ops.json
 - **node-cron** (backend-local) for scheduled restarts/RCON commands - nothing external, just a timer that calls the same RCON/scripts channels above
 - **The public Modrinth API** (`api.modrinth.com`) - the one exception to "only talks to your one configured server" - used only for the plugin store's search/browse/install, over plain HTTPS, no credentials involved
 
@@ -32,13 +32,16 @@ the short version, skip to [Quick start](#quick-start).
 7. [Scheduled tasks](#scheduled-tasks)
 8. [Backups](#backups)
 9. [server.properties editor](#serverproperties-editor)
-10. [Audit log](#audit-log)
-11. [Localization](#localization)
-12. [Running in production](#running-in-production)
-13. [Running with systemd](#running-with-systemd)
-14. [Docker](#docker)
-15. [Development mode](#development-mode)
-16. [Troubleshooting](#troubleshooting)
+10. [bukkit.yml & spigot.yml](#bukkityml--spigotyml)
+11. [Whitelist](#whitelist)
+12. [Ops](#ops)
+13. [Audit log](#audit-log)
+14. [Localization](#localization)
+15. [Running in production](#running-in-production)
+16. [Running with systemd](#running-with-systemd)
+17. [Docker](#docker)
+18. [Development mode](#development-mode)
+19. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -207,6 +210,12 @@ backend refusing to start.
 | Variable | Example | Meaning |
 |---|---|---|
 | `SERVER_PROPERTIES_PATH` | `/home/minecraft/server/server.properties` | Absolute path to `server.properties`, on the target server. |
+
+### Server Config additional files / Whitelist / Ops
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `SERVER_ROOT_DIR` | `/home/minecraft/server` | Absolute path, on the target server, to the directory containing `bukkit.yml`, `spigot.yml`, `whitelist.json` and `ops.json`. Optional - if unset, it's derived from `SERVER_PROPERTIES_PATH`'s directory (normally the same place). Only set it explicitly if those files live somewhere else. |
 
 ### Plugin store config
 
@@ -475,6 +484,90 @@ on the server but has no effect on Paloondra's own `RCON_HOST`/`RCON_PORT`/
 If you change the RCON port/password in `server.properties`, update
 `backend/.env` to match and restart the backend, or RCON-dependent tabs
 will start failing to connect after the Minecraft server restarts.
+
+---
+
+## bukkit.yml & spigot.yml
+
+The same "Server Config" tab as server.properties, switched via the file
+selector at the top (`server.properties` / `bukkit.yml` / `spigot.yml`).
+Both files live under `SERVER_ROOT_DIR` (see above) and are edited as raw
+YAML in a Monaco editor with YAML syntax highlighting - there's no
+structured form, and deliberately so: a form would have to either hide
+unknown keys or guess how to round-trip comments, and either way risks
+silently corrupting a file you didn't ask it to touch. A raw editor never
+has that problem.
+
+- **Validation before save**: every keystroke is parsed client-side with
+  `js-yaml`; if the content doesn't parse, the Save button disables itself
+  and the parse error is shown inline. The backend re-validates the same
+  way before writing (using the `yaml` package it already depends on) as a
+  defense-in-depth check against a direct API call bypassing the frontend.
+  Nothing invalid ever reaches disk.
+- **No live-reload**: unlike the whitelist, Bukkit/Spigot don't expose a
+  safe way to reload these files into a running server - a plain `/reload`
+  command is well known to break plugins in subtle ways and is deliberately
+  **not** offered anywhere in this panel. Saving shows a persistent warning
+  banner ("Changes to bukkit.yml / spigot.yml require a full server restart
+  to take effect") with a **Restart now** button that runs the same
+  `RESTART_SCRIPT` as the Dashboard.
+- Comments and key ordering are preserved automatically, since the file is
+  never parsed-and-reserialized - only ever read and written back as text.
+
+---
+
+## Whitelist
+
+Reads `SERVER_ROOT_DIR/whitelist.json` over SFTP for display, but **every
+change goes through RCON**, never a direct edit to the JSON:
+
+- **Add** → `whitelist add <name>`. The server resolves the UUID itself
+  (via the Mojang API in online-mode, or a offline-mode UUID otherwise) and
+  writes `whitelist.json` on its own - Paloondra never guesses a UUID.
+- **Remove** → `whitelist remove <name>`.
+- **Enable/disable** (the toggle next to the title) → `whitelist on` /
+  `whitelist off`, which also updates `white-list` in `server.properties`
+  immediately - no restart needed either way.
+- **Reload from disk** → `whitelist reload`, for the one case that *isn't*
+  covered by the above: you (or something else) edited `whitelist.json`
+  directly over SFTP/SSH outside this panel. It's not needed for anything
+  done through the Add/Remove buttons, which already take effect instantly.
+
+After every RCON command above, the panel re-reads `whitelist.json` (and
+`server.properties` for the enabled flag) so what's displayed always
+matches what's actually on disk - never just an optimistic local update.
+Player names are validated against Minecraft's own username charset
+(1-16 characters, letters/numbers/underscore) before ever reaching an RCON
+command string. RCON has no structured success/failure signal - every
+response is just plain text meant for a player's chat window - so failures
+(unknown player, an offline-mode UUID that can't be resolved, etc.) are
+detected with a best-effort match against common failure phrasings
+(`routeUtils.ts`'s `looksLikeRconFailure`) and shown as an error toast
+instead of a falsely cheerful success message.
+
+---
+
+## Ops
+
+Reads `SERVER_ROOT_DIR/ops.json` over SFTP for display (name, UUID,
+permission level, bypasses-player-limit), with adds/removes going through
+RCON exactly like the whitelist:
+
+- **Add** → `op <name>`.
+- **Remove** → `deop <name>`.
+
+Both take effect immediately, no restart required, and the panel re-reads
+`ops.json` afterward the same way the Whitelist tab does.
+
+**Per-player permission level is the one exception.** Vanilla has no RCON
+command to set an arbitrary op level - `/op` always grants whatever
+`op-permission-level` is configured in `server.properties`, and there is no
+`ops reload` command the way there's a `whitelist reload`. Changing an
+existing operator's level (the dropdown in the Level column) therefore
+edits `ops.json` directly over SFTP instead of going through RCON, and
+**requires a full server restart** to take effect - the panel shows the
+same restart-required banner as bukkit.yml/spigot.yml after a level change.
+Adding and removing operators is unaffected by this and stays instant.
 
 ---
 
@@ -806,6 +899,29 @@ line it names. This is deliberate: Paloondra won't run half-configured.
 `RCON_PASSWORD` doesn't match `rcon.password` in `server.properties`, or
 the server hasn't picked up a changed password yet (restart it).
 
+**Whitelist/Ops/bukkit.yml/spigot.yml tabs show a "not configured" message**
+`SERVER_ROOT_DIR` isn't set and couldn't be derived because
+`SERVER_PROPERTIES_PATH` also isn't set. Set at least one of the two in
+`backend/.env` — see [Every `.env` variable, explained](#every-env-variable-explained).
+
+**Whitelist add/remove or Ops add/remove shows an error toast with the player's name in it**
+That's the Minecraft server's own RCON response, not a Paloondra bug — most
+often "that player does not exist" because the name is offline-mode-only
+and can't be resolved to a UUID (online-mode servers resolve any real
+Java/Bedrock username), or a typo. Double-check the name is spelled and
+cased exactly as the player's actual Minecraft account name.
+
+**Server Config's Save button won't enable for bukkit.yml/spigot.yml**
+The content doesn't currently parse as valid YAML — the parse error is
+shown next to the Save button. Fix the reported line/column and it
+re-enables automatically; nothing is ever written while it's showing.
+
+**Changed an operator's level but it's not taking effect in-game**
+That's expected — unlike adding/removing operators (instant via RCON),
+changing an existing operator's *level* edits `ops.json` directly and
+needs a full server restart to take effect, same as it would if you'd
+edited the file by hand. See [Ops](#ops).
+
 **SSH terminal / File Manager show "connect ECONNREFUSED" or "connect ETIMEDOUT"**
 - `SSH_HOST`/`SSH_PORT` is wrong, or something (firewall, security group)
   is blocking the connection from the backend host.
@@ -936,7 +1052,9 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 | **Plugins & Mods** | Installed plugins (enable/disable/delete/download, real names parsed from `plugin.yml`), install by URL or drag-and-drop `.jar`, and a Modrinth-backed plugin store with search/filters/install - see [Plugins & the plugin store](#plugins--the-plugin-store). A banner at the top makes clear only plugins are supported; mod support isn't available yet |
 | **Backups** | Trigger `BACKUP_SCRIPT`, list/download/delete what it produces - see [Backups](#backups) |
 | **Scheduled Tasks** | Cron-scheduled restarts or RCON commands, editable list, run-now - see [Scheduled tasks](#scheduled-tasks) |
-| **Server Config** | Friendly form + raw-text editor for `server.properties` - see [server.properties editor](#serverproperties-editor) |
+| **Server Config** | Friendly form + raw-text editor for `server.properties`, plus a Monaco YAML editor for `bukkit.yml`/`spigot.yml` with validate-before-save and a restart-required banner - see [server.properties editor](#serverproperties-editor) and [bukkit.yml & spigot.yml](#bukkityml--spigotyml) |
+| **Whitelist** | View/add/remove whitelisted players and toggle the whitelist on/off, all via RCON (instant, no restart), plus a manual "reload from disk" for out-of-band edits - see [Whitelist](#whitelist) |
+| **Ops** | View/add/remove operators via RCON (instant), plus a per-player permission level editor (edits `ops.json` directly, requires a restart) - see [Ops](#ops) |
 
 ## Notes on the implementation
 
@@ -980,6 +1098,28 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   install endpoint only accepts file URLs on `cdn.modrinth.com`, separate
   from the general "install by URL" feature which accepts any http(s) URL
   you give it on purpose.
+- **Monaco is bundled and self-hosted**, not loaded from a CDN like
+  `@monaco-editor/react` does by default (`frontend/src/monacoSetup.ts`) -
+  consistent with this app's "no external dependencies beyond your own
+  server and Modrinth" design, and because it simply doesn't work on
+  networks that block arbitrary CDNs.
+- **RCON has no structured success/failure protocol** - every command's
+  response is plain text meant for a player's chat window, not a machine-
+  readable status. The Whitelist and Ops tabs detect failures (unknown
+  player, an unresolvable offline-mode UUID, etc.) with a best-effort
+  regex match against common failure phrasings
+  (`looksLikeRconFailure` in `backend/src/routes/routeUtils.ts`); a false
+  negative there just surfaces the server's own response text as a
+  (slightly misleadingly cheerful) success toast instead of an error.
+- **Whitelist vs. Ops write paths are deliberately different.** Both list
+  their JSON file over SFTP, but whitelist adds/removes/toggles/reloads are
+  *all* RCON commands (`whitelist add/remove/on/off/reload`) because
+  vanilla exposes all of them and `whitelist reload` makes even an
+  out-of-band file edit recoverable without a restart. Ops only has
+  `op`/`deop` over RCON - there's no vanilla command to set an arbitrary
+  permission level or to reload `ops.json`, so a level change edits the
+  file directly over SFTP and needs an actual server restart, unlike every
+  other write in this app.
 
 ## Security
 
@@ -1009,3 +1149,11 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   plugin/backup/scheduler/server.properties mutation are recorded in the
   [audit log](#audit-log) with the acting username - the interactive RCON
   Console tab is not (it already shows its own live history in place).
+- Every player name accepted by the Whitelist and Ops tabs is validated
+  against Minecraft's own username charset (1-16 characters,
+  letters/numbers/underscore) before it ever reaches an RCON command
+  string, in `isValidMinecraftUsername` (`backend/src/routes/routeUtils.ts`).
+- Saves to `bukkit.yml`/`spigot.yml` are validated as parseable YAML on
+  both the frontend (before the Save button is even enabled) and the
+  backend (before the write happens) - a malformed file can't reach disk
+  through this tab even if a request bypasses the frontend entirely.

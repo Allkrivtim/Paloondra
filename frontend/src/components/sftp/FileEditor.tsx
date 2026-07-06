@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
+import '../../monacoSetup';
 import { useTranslation } from 'react-i18next';
 import { getErrorMessage } from '../../api/errors';
 import Spinner from '../common/Spinner';

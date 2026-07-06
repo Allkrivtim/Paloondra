@@ -16,6 +16,8 @@ export default function Layout() {
     { to: '/backups', label: t('nav.backups') },
     { to: '/scheduler', label: t('nav.scheduler') },
     { to: '/server-properties', label: t('nav.serverProperties') },
+    { to: '/whitelist', label: t('nav.whitelist') },
+    { to: '/ops', label: t('nav.ops') },
   ];
 
   return (
