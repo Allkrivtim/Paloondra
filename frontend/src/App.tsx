@@ -18,6 +18,8 @@ const Plugins = lazy(() => import('./components/tabs/Plugins'));
 const Backups = lazy(() => import('./components/tabs/Backups'));
 const ScheduledTasks = lazy(() => import('./components/tabs/ScheduledTasks'));
 const ServerProperties = lazy(() => import('./components/tabs/ServerProperties'));
+const Whitelist = lazy(() => import('./components/tabs/Whitelist'));
+const Ops = lazy(() => import('./components/tabs/Ops'));
 
 function TabFallback() {
   return (
@@ -89,6 +91,22 @@ export default function App() {
                 element={
                   <Suspense fallback={<TabFallback />}>
                     <ServerProperties />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="whitelist"
+                element={
+                  <Suspense fallback={<TabFallback />}>
+                    <Whitelist />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="ops"
+                element={
+                  <Suspense fallback={<TabFallback />}>
+                    <Ops />
                   </Suspense>
                 }
               />

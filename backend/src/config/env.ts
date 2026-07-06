@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
 dotenv.config();
 
@@ -90,6 +91,16 @@ function parseUsers(raw: string): AppUserConfig[] {
 const sshPassword = process.env.SSH_PASSWORD || undefined;
 const sshKeyPath = process.env.SSH_KEY_PATH || undefined;
 
+const serverPropertiesPath = process.env.SERVER_PROPERTIES_PATH?.trim() || undefined;
+// Directory ON THE TARGET SERVER containing server.properties, bukkit.yml,
+// spigot.yml, whitelist.json and ops.json. Explicit SERVER_ROOT_DIR wins;
+// otherwise it's derived from SERVER_PROPERTIES_PATH's directory, since
+// that's normally the server's working directory too. Always POSIX paths -
+// this describes the target Linux server, not whatever OS the backend runs on.
+const serverRootDir =
+  process.env.SERVER_ROOT_DIR?.trim() ||
+  (serverPropertiesPath ? path.posix.dirname(serverPropertiesPath) : undefined);
+
 export const env = {
   port: optionalInt('PORT', 4000, { min: 1, max: 65535 }),
   corsOrigin: optional('CORS_ORIGIN', 'http://localhost:5173'),
@@ -165,7 +176,14 @@ export const env = {
 
   serverProperties: {
     // Absolute path to server.properties ON THE TARGET SERVER.
-    path: process.env.SERVER_PROPERTIES_PATH?.trim() || undefined,
+    path: serverPropertiesPath,
+  },
+
+  // Shared by the Server Config tab's bukkit.yml/spigot.yml editors and the
+  // Whitelist/Ops tabs (whitelist.json, ops.json) - all four files normally
+  // live next to server.properties.
+  serverFiles: {
+    rootDir: serverRootDir,
   },
 
   modrinth: {

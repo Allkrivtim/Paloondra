@@ -1,19 +1,20 @@
 import { useTranslation } from 'react-i18next';
-import Spinner from '../common/Spinner';
+import Spinner from './Spinner';
 
 interface Props {
+  message: string;
   onRestart: () => void;
   restarting: boolean;
   onDismiss: () => void;
 }
 
-export default function RestartBanner({ onRestart, restarting, onDismiss }: Props) {
+export default function RestartBanner({ message, onRestart, restarting, onDismiss }: Props) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-panel-warn/40 bg-panel-warn/10 px-4 py-3 text-sm">
       <div className="flex items-center gap-2 text-panel-warn">
         <span>⚠️</span>
-        <span>{t('plugins.restartBannerMessage')}</span>
+        <span>{message}</span>
       </div>
       <div className="flex items-center gap-2">
         <button
