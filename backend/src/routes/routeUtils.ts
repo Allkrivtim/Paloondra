@@ -30,17 +30,22 @@ export function safeJoinFilename(dir: string, filename: unknown): string {
 }
 
 /**
- * The Server Config (bukkit.yml/spigot.yml) and Whitelist/Ops tabs all read
- * files that live next to server.properties on the target server - derived
- * from SERVER_PROPERTIES_PATH's directory. This is "not configured" like
+ * The server.properties editor, the Server Config (bukkit.yml/spigot.yml)
+ * tabs, and the Whitelist/Ops tabs all read files that live inside
+ * SERVER_ROOT_DIR on the target server. This is "not configured" like
  * PLUGINS_DIR/BACKUPS_DIR - unset means the tab shows a clear message
  * instead of the backend refusing to start.
  */
 export function requireServerRootDir(): string {
   if (!env.serverFiles.rootDir) {
-    throw new Error('SERVER_PROPERTIES_PATH is not configured - set it in backend/.env to use this feature');
+    throw new Error('SERVER_ROOT_DIR is not configured - set it in backend/.env to use this feature');
   }
   return env.serverFiles.rootDir;
+}
+
+/** Absolute path to server.properties, inside SERVER_ROOT_DIR. */
+export function requireServerPropertiesPath(): string {
+  return path.posix.join(requireServerRootDir(), 'server.properties');
 }
 
 /** Minecraft usernames are 1-16 chars of [A-Za-z0-9_] - reject anything else before it reaches an RCON command string. */

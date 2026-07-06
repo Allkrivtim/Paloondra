@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import path from 'path';
 
 dotenv.config();
 
@@ -91,13 +90,11 @@ function parseUsers(raw: string): AppUserConfig[] {
 const sshPassword = process.env.SSH_PASSWORD || undefined;
 const sshKeyPath = process.env.SSH_KEY_PATH || undefined;
 
-const serverPropertiesPath = process.env.SERVER_PROPERTIES_PATH?.trim() || undefined;
 // Directory ON THE TARGET SERVER containing server.properties, bukkit.yml,
-// spigot.yml, whitelist.json and ops.json - always derived from
-// SERVER_PROPERTIES_PATH's directory, since all four live alongside it.
-// Always a POSIX path - this describes the target Linux server, not
-// whatever OS the backend runs on.
-const serverRootDir = serverPropertiesPath ? path.posix.dirname(serverPropertiesPath) : undefined;
+// spigot.yml, whitelist.json and ops.json - the single source of truth for
+// all five files' locations. Always a POSIX path - this describes the
+// target Linux server, not whatever OS the backend runs on.
+const serverRootDir = process.env.SERVER_ROOT_DIR?.trim() || undefined;
 
 export const env = {
   port: optionalInt('PORT', 4000, { min: 1, max: 65535 }),
@@ -172,14 +169,10 @@ export const env = {
     dir: process.env.BACKUPS_DIR?.trim() || undefined,
   },
 
-  serverProperties: {
-    // Absolute path to server.properties ON THE TARGET SERVER.
-    path: serverPropertiesPath,
-  },
-
-  // Shared by the Server Config tab's bukkit.yml/spigot.yml editors and the
-  // Whitelist/Ops tabs (whitelist.json, ops.json) - all four files normally
-  // live next to server.properties.
+  // Backs the server.properties editor, the Server Config tab's
+  // bukkit.yml/spigot.yml editors, and the Whitelist/Ops tabs
+  // (whitelist.json, ops.json) - all five files are found by their standard
+  // filenames inside this one directory.
   serverFiles: {
     rootDir: serverRootDir,
   },

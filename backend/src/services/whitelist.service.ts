@@ -1,8 +1,7 @@
 import path from 'path';
-import { env } from '../config/env';
 import { fileManagerService } from './fileManager.service';
 import { parseProperties } from './propertiesFile';
-import { requireServerRootDir, looksLikeRconFailure } from '../routes/routeUtils';
+import { requireServerRootDir, requireServerPropertiesPath, looksLikeRconFailure } from '../routes/routeUtils';
 import { rconService } from './rcon.service';
 import { WhitelistDocument, WhitelistEntry } from '../types';
 
@@ -10,13 +9,6 @@ const MAX_SIZE = 1024 * 1024; // whitelist.json is a small array of {uuid, name}
 
 function whitelistJsonPath(): string {
   return path.posix.join(requireServerRootDir(), 'whitelist.json');
-}
-
-// server.properties' white-list flag lives at the explicitly configured
-// SERVER_PROPERTIES_PATH if set, otherwise it's assumed to sit next to
-// whitelist.json in the same server root directory.
-function serverPropertiesPath(): string {
-  return env.serverProperties.path ?? path.posix.join(requireServerRootDir(), 'server.properties');
 }
 
 async function readEntries(): Promise<WhitelistEntry[]> {
@@ -34,7 +26,7 @@ async function readEntries(): Promise<WhitelistEntry[]> {
 }
 
 async function readEnabled(): Promise<boolean> {
-  const raw = await fileManagerService.readTextFile(serverPropertiesPath(), MAX_SIZE);
+  const raw = await fileManagerService.readTextFile(requireServerPropertiesPath(), MAX_SIZE);
   return parseProperties(raw)['white-list'] === 'true';
 }
 
