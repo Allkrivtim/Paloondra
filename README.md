@@ -205,11 +205,11 @@ backend refusing to start.
 |---|---|---|
 | `BACKUPS_DIR` | `/home/minecraft/backups` | Absolute path, on the target server, to wherever `BACKUP_SCRIPT` writes its archives. Only used for listing/downloading/deleting them — triggering a backup still just runs `BACKUP_SCRIPT`. |
 
-### server.properties editor
+### Server Config / Whitelist / Ops
 
 | Variable | Example | Meaning |
 |---|---|---|
-| `SERVER_PROPERTIES_PATH` | `/home/minecraft/server/server.properties` | Absolute path to `server.properties`, on the target server. |
+| `SERVER_ROOT_DIR` | `/home/minecraft/server` | Absolute path, on the target server, to the directory containing `server.properties`, `bukkit.yml`, `spigot.yml`, `whitelist.json` and `ops.json`. All five are found by their standard filenames inside this one directory. |
 
 ### Plugin store config
 
@@ -458,7 +458,7 @@ you - Paloondra just runs the script and shows you what it produced.
 
 ## server.properties editor
 
-Two modes, both writing to `SERVER_PROPERTIES_PATH` over SFTP:
+Two modes, both writing to `SERVER_ROOT_DIR/server.properties` over SFTP:
 
 - **Form** - the ~20 most commonly changed keys (difficulty, gamemode, PvP,
   whitelist, view/simulation distance, MOTD, level seed/name/type, and
@@ -485,10 +485,9 @@ will start failing to connect after the Minecraft server restarts.
 
 The same "Server Config" tab as server.properties, switched via the file
 selector at the top (`server.properties` / `bukkit.yml` / `spigot.yml`).
-Both files live alongside `server.properties` (same directory, derived from
-`SERVER_PROPERTIES_PATH` - see above) and, like the server.properties
-editor, open in a **Form** view by default with a **Raw** toggle as a
-fallback.
+Both files live inside `SERVER_ROOT_DIR` (see above), alongside
+`server.properties`, and, like the server.properties editor, open in a
+**Form** view by default with a **Raw** toggle as a fallback.
 
 - **Form view**: known settings (spawn limits, tick rates, chunk GC,
   world-settings ranges, and so on - the same fields you'd otherwise hunt
@@ -526,7 +525,7 @@ fallback.
 
 ## Whitelist
 
-Reads `whitelist.json` (alongside `server.properties`) over SFTP for display, but **every
+Reads `SERVER_ROOT_DIR/whitelist.json` over SFTP for display, but **every
 change goes through RCON**, never a direct edit to the JSON:
 
 - **Add** → `whitelist add <name>`. The server resolves the UUID itself
@@ -557,7 +556,7 @@ instead of a falsely cheerful success message.
 
 ## Ops
 
-Reads `ops.json` (alongside `server.properties`) over SFTP for display (name, UUID,
+Reads `SERVER_ROOT_DIR/ops.json` over SFTP for display (name, UUID,
 permission level, bypasses-player-limit), with adds/removes going through
 RCON exactly like the whitelist:
 
@@ -908,9 +907,10 @@ line it names. This is deliberate: Paloondra won't run half-configured.
 the server hasn't picked up a changed password yet (restart it).
 
 **Whitelist/Ops/bukkit.yml/spigot.yml tabs show a "not configured" message**
-`SERVER_PROPERTIES_PATH` isn't set - all four files (`bukkit.yml`,
-`spigot.yml`, `whitelist.json`, `ops.json`) are located relative to it, so
-setting it in `backend/.env` is enough to enable all of these tabs - see
+`SERVER_ROOT_DIR` isn't set in `backend/.env` - all five files
+(`server.properties`, `bukkit.yml`, `spigot.yml`, `whitelist.json`,
+`ops.json`) are located inside it, so setting it is enough to enable all of
+these tabs - see
 [Every `.env` variable, explained](#every-env-variable-explained).
 
 **Whitelist add/remove or Ops add/remove shows an error toast with the player's name in it**
@@ -1003,7 +1003,7 @@ affects the start/stop/restart/backup scripts too, since they run over the
 same SSH connection.
 
 **Plugins/Backups/Server Config tab shows "not configured"**
-`PLUGINS_DIR` / `BACKUPS_DIR` / `SERVER_PROPERTIES_PATH` is unset in
+`PLUGINS_DIR` / `BACKUPS_DIR` / `SERVER_ROOT_DIR` is unset in
 `backend/.env`. These are optional (unlike RCON/SSH, the backend still
 starts without them) so the tab just tells you it needs a value instead of
 failing at startup - set the relevant one and restart the backend.
