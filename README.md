@@ -211,12 +211,6 @@ backend refusing to start.
 |---|---|---|
 | `SERVER_PROPERTIES_PATH` | `/home/minecraft/server/server.properties` | Absolute path to `server.properties`, on the target server. |
 
-### Server Config additional files / Whitelist / Ops
-
-| Variable | Example | Meaning |
-|---|---|---|
-| `SERVER_ROOT_DIR` | `/home/minecraft/server` | Absolute path, on the target server, to the directory containing `bukkit.yml`, `spigot.yml`, `whitelist.json` and `ops.json`. Optional - if unset, it's derived from `SERVER_PROPERTIES_PATH`'s directory (normally the same place). Only set it explicitly if those files live somewhere else. |
-
 ### Plugin store config
 
 | Variable | Example | Meaning |
@@ -491,19 +485,35 @@ will start failing to connect after the Minecraft server restarts.
 
 The same "Server Config" tab as server.properties, switched via the file
 selector at the top (`server.properties` / `bukkit.yml` / `spigot.yml`).
-Both files live under `SERVER_ROOT_DIR` (see above) and are edited as raw
-YAML in a Monaco editor with YAML syntax highlighting - there's no
-structured form, and deliberately so: a form would have to either hide
-unknown keys or guess how to round-trip comments, and either way risks
-silently corrupting a file you didn't ask it to touch. A raw editor never
-has that problem.
+Both files live alongside `server.properties` (same directory, derived from
+`SERVER_PROPERTIES_PATH` - see above) and, like the server.properties
+editor, open in a **Form** view by default with a **Raw** toggle as a
+fallback.
 
-- **Validation before save**: every keystroke is parsed client-side with
-  `js-yaml`; if the content doesn't parse, the Save button disables itself
-  and the parse error is shown inline. The backend re-validates the same
-  way before writing (using the `yaml` package it already depends on) as a
-  defense-in-depth check against a direct API call bypassing the frontend.
-  Nothing invalid ever reaches disk.
+- **Form view**: known settings (spawn limits, tick rates, chunk GC,
+  world-settings ranges, and so on - the same fields you'd otherwise hunt
+  for across both files' docs) are shown as labeled inputs - checkboxes for
+  booleans, dropdowns for the handful of enum-valued settings, number/text
+  inputs for everything else - each with a short description of what it
+  does. A field left blank (no placeholder value typed in) is simply not
+  written to the file at all; only fields you actually changed get sent on
+  Save, so the file doesn't get bloated with every default the moment you
+  touch one setting. Any key in the file that isn't one of these known
+  fields (custom plugin config someone hand-added, for instance) is left
+  completely untouched - the form only ever edits the specific keys it
+  knows about, never the file as a whole.
+- **Raw view**: the same Monaco YAML editor as before, for anything the
+  form doesn't cover. Every keystroke is parsed client-side with `js-yaml`;
+  if the content doesn't parse, the Save button disables itself and the
+  parse error is shown inline.
+- **Round-tripping**: both the form and raw saves go through the backend's
+  `yaml` package using its `Document`/AST API (`parseDocument` +
+  `setIn`/`toString`), not a parse-into-plain-object-then-reserialize
+  approach - so comments and key ordering already in the file survive a
+  form save untouched, and only the node(s) you actually changed are
+  rewritten. The backend re-validates that the content parses before
+  writing either way, as a defense-in-depth check against a direct API call
+  bypassing the frontend. Nothing invalid ever reaches disk.
 - **No live-reload**: unlike the whitelist, Bukkit/Spigot don't expose a
   safe way to reload these files into a running server - a plain `/reload`
   command is well known to break plugins in subtle ways and is deliberately
@@ -511,14 +521,12 @@ has that problem.
   banner ("Changes to bukkit.yml / spigot.yml require a full server restart
   to take effect") with a **Restart now** button that runs the same
   `RESTART_SCRIPT` as the Dashboard.
-- Comments and key ordering are preserved automatically, since the file is
-  never parsed-and-reserialized - only ever read and written back as text.
 
 ---
 
 ## Whitelist
 
-Reads `SERVER_ROOT_DIR/whitelist.json` over SFTP for display, but **every
+Reads `whitelist.json` (alongside `server.properties`) over SFTP for display, but **every
 change goes through RCON**, never a direct edit to the JSON:
 
 - **Add** → `whitelist add <name>`. The server resolves the UUID itself
@@ -549,7 +557,7 @@ instead of a falsely cheerful success message.
 
 ## Ops
 
-Reads `SERVER_ROOT_DIR/ops.json` over SFTP for display (name, UUID,
+Reads `ops.json` (alongside `server.properties`) over SFTP for display (name, UUID,
 permission level, bypasses-player-limit), with adds/removes going through
 RCON exactly like the whitelist:
 
@@ -900,9 +908,10 @@ line it names. This is deliberate: Paloondra won't run half-configured.
 the server hasn't picked up a changed password yet (restart it).
 
 **Whitelist/Ops/bukkit.yml/spigot.yml tabs show a "not configured" message**
-`SERVER_ROOT_DIR` isn't set and couldn't be derived because
-`SERVER_PROPERTIES_PATH` also isn't set. Set at least one of the two in
-`backend/.env` — see [Every `.env` variable, explained](#every-env-variable-explained).
+`SERVER_PROPERTIES_PATH` isn't set - all four files (`bukkit.yml`,
+`spigot.yml`, `whitelist.json`, `ops.json`) are located relative to it, so
+setting it in `backend/.env` is enough to enable all of these tabs - see
+[Every `.env` variable, explained](#every-env-variable-explained).
 
 **Whitelist add/remove or Ops add/remove shows an error toast with the player's name in it**
 That's the Minecraft server's own RCON response, not a Paloondra bug — most
@@ -1052,7 +1061,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 | **Plugins & Mods** | Installed plugins (enable/disable/delete/download, real names parsed from `plugin.yml`), install by URL or drag-and-drop `.jar`, and a Modrinth-backed plugin store with search/filters/install - see [Plugins & the plugin store](#plugins--the-plugin-store). A banner at the top makes clear only plugins are supported; mod support isn't available yet |
 | **Backups** | Trigger `BACKUP_SCRIPT`, list/download/delete what it produces - see [Backups](#backups) |
 | **Scheduled Tasks** | Cron-scheduled restarts or RCON commands, editable list, run-now - see [Scheduled tasks](#scheduled-tasks) |
-| **Server Config** | Friendly form + raw-text editor for `server.properties`, plus a Monaco YAML editor for `bukkit.yml`/`spigot.yml` with validate-before-save and a restart-required banner - see [server.properties editor](#serverproperties-editor) and [bukkit.yml & spigot.yml](#bukkityml--spigotyml) |
+| **Server Config** | Friendly form + raw-text editor for `server.properties`, `bukkit.yml`, and `spigot.yml` alike, with validate-before-save and a restart-required banner for the YAML files - see [server.properties editor](#serverproperties-editor) and [bukkit.yml & spigot.yml](#bukkityml--spigotyml) |
 | **Whitelist** | View/add/remove whitelisted players and toggle the whitelist on/off, all via RCON (instant, no restart), plus a manual "reload from disk" for out-of-band edits - see [Whitelist](#whitelist) |
 | **Ops** | View/add/remove operators via RCON (instant), plus a per-player permission level editor (edits `ops.json` directly, requires a restart) - see [Ops](#ops) |
 
@@ -1156,4 +1165,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 - Saves to `bukkit.yml`/`spigot.yml` are validated as parseable YAML on
   both the frontend (before the Save button is even enabled) and the
   backend (before the write happens) - a malformed file can't reach disk
-  through this tab even if a request bypasses the frontend entirely.
+  through this tab even if a request bypasses the frontend entirely. In
+  form view, only the known field paths a request names are ever written -
+  the backend rejects any path outside that allowlist, so a crafted request
+  can't use the "structured update" endpoint to touch arbitrary keys.

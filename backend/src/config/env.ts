@@ -93,13 +93,11 @@ const sshKeyPath = process.env.SSH_KEY_PATH || undefined;
 
 const serverPropertiesPath = process.env.SERVER_PROPERTIES_PATH?.trim() || undefined;
 // Directory ON THE TARGET SERVER containing server.properties, bukkit.yml,
-// spigot.yml, whitelist.json and ops.json. Explicit SERVER_ROOT_DIR wins;
-// otherwise it's derived from SERVER_PROPERTIES_PATH's directory, since
-// that's normally the server's working directory too. Always POSIX paths -
-// this describes the target Linux server, not whatever OS the backend runs on.
-const serverRootDir =
-  process.env.SERVER_ROOT_DIR?.trim() ||
-  (serverPropertiesPath ? path.posix.dirname(serverPropertiesPath) : undefined);
+// spigot.yml, whitelist.json and ops.json - always derived from
+// SERVER_PROPERTIES_PATH's directory, since all four live alongside it.
+// Always a POSIX path - this describes the target Linux server, not
+// whatever OS the backend runs on.
+const serverRootDir = serverPropertiesPath ? path.posix.dirname(serverPropertiesPath) : undefined;
 
 export const env = {
   port: optionalInt('PORT', 4000, { min: 1, max: 65535 }),

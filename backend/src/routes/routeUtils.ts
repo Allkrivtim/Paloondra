@@ -31,15 +31,14 @@ export function safeJoinFilename(dir: string, filename: unknown): string {
 
 /**
  * The Server Config (bukkit.yml/spigot.yml) and Whitelist/Ops tabs all read
- * files that live next to server.properties on the target server. This is
- * "not configured" like PLUGINS_DIR/BACKUPS_DIR - unset means the tab shows
- * a clear message instead of the backend refusing to start.
+ * files that live next to server.properties on the target server - derived
+ * from SERVER_PROPERTIES_PATH's directory. This is "not configured" like
+ * PLUGINS_DIR/BACKUPS_DIR - unset means the tab shows a clear message
+ * instead of the backend refusing to start.
  */
 export function requireServerRootDir(): string {
   if (!env.serverFiles.rootDir) {
-    throw new Error(
-      'SERVER_ROOT_DIR is not configured (and could not be derived from SERVER_PROPERTIES_PATH) - set one in backend/.env to use this feature',
-    );
+    throw new Error('SERVER_PROPERTIES_PATH is not configured - set it in backend/.env to use this feature');
   }
   return env.serverFiles.rootDir;
 }

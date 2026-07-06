@@ -352,7 +352,260 @@
     "invalidYaml": "Invalid YAML: {{error}}",
     "restartRequiredMessage": "Changes to bukkit.yml / spigot.yml require a full server restart to take effect.",
     "restartTriggered": "Restart triggered - see Dashboard for live output",
-    "failedToTriggerRestart": "Failed to trigger restart"
+    "failedToTriggerRestart": "Failed to trigger restart",
+    "usingDefault": "Using default",
+    "otherKeysNotice": "Keys not listed here are left untouched in the file - edit them in Raw mode if needed.",
+    "sections": {
+      "bukkit": {
+        "settings": "Settings",
+        "spawn-limits": "Spawn limits",
+        "chunk-gc": "Chunk garbage collection",
+        "ticks-per": "Spawn/save intervals"
+      },
+      "spigot": {
+        "settings": "Settings",
+        "messages": "Messages",
+        "world-settings": "World settings (default)"
+      }
+    },
+    "fields": {
+      "bukkit": {
+        "settings__allow-end": {
+          "label": "Allow The End",
+          "description": "Whether players can travel to the End dimension."
+        },
+        "settings__warn-on-overload": {
+          "label": "Warn on overload",
+          "description": "Log a warning when the server can't keep up with the tick rate."
+        },
+        "settings__permissions-file": {
+          "label": "Permissions file",
+          "description": "Filename of the permissions file Bukkit loads on startup."
+        },
+        "settings__update-folder": {
+          "label": "Update folder",
+          "description": "Folder plugin updates are staged in until the next restart."
+        },
+        "settings__plugin-profiling": {
+          "label": "Plugin profiling",
+          "description": "Track per-plugin CPU time for the /timings report."
+        },
+        "settings__connection-throttle": {
+          "label": "Connection throttle",
+          "description": "Minimum time (ms) between connection attempts from the same IP."
+        },
+        "settings__query-plugins": {
+          "label": "Query plugins",
+          "description": "Include the plugin list in the server's GameSpy4 query response."
+        },
+        "settings__deprecated-verbose": {
+          "label": "Deprecated event warnings",
+          "description": "How verbosely to log usage of deprecated Bukkit API events."
+        },
+        "settings__shutdown-message": {
+          "label": "Shutdown message",
+          "description": "Message sent to players when the server shuts down."
+        },
+        "settings__minimum-api": {
+          "label": "Minimum API version",
+          "description": "Oldest Bukkit API version plugins are allowed to target."
+        },
+        "spawn-limits__monsters": {
+          "label": "Monster spawn limit",
+          "description": "Max hostile mobs per world."
+        },
+        "spawn-limits__animals": {
+          "label": "Animal spawn limit",
+          "description": "Max passive land animals per world."
+        },
+        "spawn-limits__water-animals": {
+          "label": "Water animal spawn limit",
+          "description": "Max squid/fish-type mobs per world."
+        },
+        "spawn-limits__water-ambient": {
+          "label": "Water ambient spawn limit",
+          "description": "Max ambient water mobs (e.g. cod, salmon) per world."
+        },
+        "spawn-limits__water-underground-creature": {
+          "label": "Water underground creature spawn limit",
+          "description": "Max glow squid and similar underground water mobs per world."
+        },
+        "spawn-limits__axolotls": {
+          "label": "Axolotl spawn limit",
+          "description": "Max axolotls per world."
+        },
+        "spawn-limits__ambient": {
+          "label": "Ambient spawn limit",
+          "description": "Max ambient mobs like bats per world."
+        },
+        "chunk-gc__period-in-ticks": {
+          "label": "Chunk garbage collection period",
+          "description": "How often (in ticks) unused chunks are checked for unloading."
+        },
+        "ticks-per__animal-spawns": {
+          "label": "Animal spawn interval",
+          "description": "Ticks between animal spawn attempts (higher = less frequent)."
+        },
+        "ticks-per__monster-spawns": {
+          "label": "Monster spawn interval",
+          "description": "Ticks between monster spawn attempts."
+        },
+        "ticks-per__water-spawns": {
+          "label": "Water mob spawn interval",
+          "description": "Ticks between water mob spawn attempts."
+        },
+        "ticks-per__water-ambient-spawns": {
+          "label": "Water ambient spawn interval",
+          "description": "Ticks between ambient water mob spawn attempts."
+        },
+        "ticks-per__water-underground-creature-spawns": {
+          "label": "Water underground creature spawn interval",
+          "description": "Ticks between underground water mob spawn attempts."
+        },
+        "ticks-per__ambient-spawns": {
+          "label": "Ambient spawn interval",
+          "description": "Ticks between ambient mob spawn attempts."
+        },
+        "ticks-per__autosave": {
+          "label": "Autosave interval",
+          "description": "Ticks between automatic world saves."
+        }
+      },
+      "spigot": {
+        "settings__bungeecord": {
+          "label": "BungeeCord support",
+          "description": "Enable IP forwarding for running behind a BungeeCord/Velocity proxy."
+        },
+        "settings__restart-on-crash": {
+          "label": "Restart on crash",
+          "description": "Automatically run the restart script if the server crashes."
+        },
+        "settings__restart-script": {
+          "label": "Restart script",
+          "description": "Path to the script run when restarting after a crash."
+        },
+        "settings__netty-threads": {
+          "label": "Netty threads",
+          "description": "Number of network I/O threads."
+        },
+        "settings__player-shuffle": {
+          "label": "Player shuffle",
+          "description": "Interval (ticks) for shuffling the player list order; 0 disables it."
+        },
+        "settings__user-cache-size": {
+          "label": "User cache size",
+          "description": "Number of player name/UUID lookups kept in usercache.json."
+        },
+        "settings__sample-count": {
+          "label": "TPS sample count",
+          "description": "How many samples are averaged for the reported TPS."
+        },
+        "messages__whitelist": {
+          "label": "Whitelist message",
+          "description": "Shown to a player rejected for not being whitelisted."
+        },
+        "messages__unknown-command": {
+          "label": "Unknown command message",
+          "description": "Shown when a player enters a command that doesn't exist."
+        },
+        "messages__server-full": {
+          "label": "Server full message",
+          "description": "Shown when a player tries to join a full server."
+        },
+        "messages__outdated-client": {
+          "label": "Outdated client message",
+          "description": "Shown when a player's client version is too old. {0} is replaced with the required version."
+        },
+        "messages__outdated-server": {
+          "label": "Outdated server message",
+          "description": "Shown when a player's client is newer than the server. {0} is replaced with the server's version."
+        },
+        "messages__restart": {
+          "label": "Restart message",
+          "description": "Shown to players when the server restarts."
+        },
+        "world-settings__default__view-distance": {
+          "label": "View distance",
+          "description": "Chunks sent to each client around their position; -1 or \"default\" uses server.properties' value."
+        },
+        "world-settings__default__simulation-distance": {
+          "label": "Simulation distance",
+          "description": "Chunks around each player that are actively ticked; -1 or \"default\" uses server.properties' value."
+        },
+        "world-settings__default__mob-spawn-range": {
+          "label": "Mob spawn range",
+          "description": "Radius in chunks around a player where mobs can spawn."
+        },
+        "world-settings__default__chunks-per-tick": {
+          "label": "Chunks per tick",
+          "description": "How many chunks are processed for random ticks each tick."
+        },
+        "world-settings__default__item-despawn-rate": {
+          "label": "Item despawn rate",
+          "description": "Ticks before a dropped item despawns."
+        },
+        "world-settings__default__arrow-despawn-rate": {
+          "label": "Arrow despawn rate",
+          "description": "Ticks before a stuck arrow despawns."
+        },
+        "world-settings__default__nerf-spawner-mobs": {
+          "label": "Nerf spawner mobs",
+          "description": "Disable AI on mobs spawned from spawners."
+        },
+        "world-settings__default__merge-radius__exp": {
+          "label": "XP orb merge radius",
+          "description": "Distance (blocks) within which experience orbs merge together."
+        },
+        "world-settings__default__merge-radius__item": {
+          "label": "Item merge radius",
+          "description": "Distance (blocks) within which dropped items merge together."
+        },
+        "world-settings__default__entity-activation-range__animals": {
+          "label": "Animal activation range",
+          "description": "Distance (blocks) from a player at which animals stay active."
+        },
+        "world-settings__default__entity-activation-range__monsters": {
+          "label": "Monster activation range",
+          "description": "Distance (blocks) from a player at which monsters stay active."
+        },
+        "world-settings__default__entity-activation-range__raiders": {
+          "label": "Raider activation range",
+          "description": "Distance (blocks) from a player at which raid mobs stay active."
+        },
+        "world-settings__default__entity-activation-range__misc": {
+          "label": "Misc entity activation range",
+          "description": "Distance (blocks) from a player at which miscellaneous entities stay active."
+        },
+        "world-settings__default__entity-activation-range__water": {
+          "label": "Water entity activation range",
+          "description": "Distance (blocks) from a player at which water mobs stay active."
+        },
+        "world-settings__default__entity-activation-range__villagers": {
+          "label": "Villager activation range",
+          "description": "Distance (blocks) from a player at which villagers stay active."
+        },
+        "world-settings__default__entity-tracking-range__players": {
+          "label": "Player tracking range",
+          "description": "Distance (blocks) at which players are tracked/visible to each other."
+        },
+        "world-settings__default__entity-tracking-range__animals": {
+          "label": "Animal tracking range",
+          "description": "Distance (blocks) at which animals are tracked."
+        },
+        "world-settings__default__entity-tracking-range__monsters": {
+          "label": "Monster tracking range",
+          "description": "Distance (blocks) at which monsters are tracked."
+        },
+        "world-settings__default__entity-tracking-range__misc": {
+          "label": "Misc tracking range",
+          "description": "Distance (blocks) at which miscellaneous entities are tracked."
+        },
+        "world-settings__default__entity-tracking-range__other": {
+          "label": "Other tracking range",
+          "description": "Distance (blocks) at which other entity types are tracked."
+        }
+      }
+    }
   },
   "whitelist": {
     "title": "Whitelist",
