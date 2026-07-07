@@ -36,7 +36,8 @@
     "scheduler": "Задачи по расписанию",
     "serverProperties": "Настройки сервера",
     "whitelist": "Вайтлист",
-    "ops": "Операторы"
+    "ops": "Операторы",
+    "motd": "MOTD"
   },
   "header": {
     "language": "Язык",
@@ -659,6 +660,118 @@
     "failedToChangeLevel": "Не удалось изменить уровень оператора",
     "removeTitle": "Снять права оператора у «{{name}}»?",
     "levelChangeRestartMessage": "Изменение уровня оператора вступит в силу только после полного перезапуска сервера. Добавление/удаление операторов применяется мгновенно."
+  },
+  "motd": {
+    "title": "MOTD (BetterMOTD)",
+    "loading": "Загрузка конфигурации BetterMOTD...",
+    "failedToLoad": "Не удалось загрузить конфигурацию BetterMOTD",
+    "saved": "Конфигурация BetterMOTD сохранена",
+    "failedToSave": "Не удалось сохранить конфигурацию BetterMOTD",
+    "reload": "Перезагрузить BetterMOTD",
+    "reloadTooltip": "Выполняет «bettermotd reload» через RCON, чтобы применить конфигурацию без перезапуска сервера",
+    "reloadedToast": "BetterMOTD перезагружен",
+    "failedToReload": "Не удалось перезагрузить BetterMOTD",
+    "reloadFailedToast": "Конфигурация сохранена, но перезагрузка не удалась: {{error}}",
+    "otherKeysNotice": "Остальные ключи, уже присутствующие в config.yml, сохраняются без изменений - для их правки используйте режим «Исходный код».",
+    "addLine": "Добавить строку",
+    "removeLine": "Удалить строку",
+    "moveUp": "Переместить вверх",
+    "moveDown": "Переместить вниз",
+    "miniMessageHint": "Текст MOTD использует форматирование MiniMessage, например",
+    "miniMessagePreviewLink": "открыть веб-предпросмотр MiniMessage",
+    "sections": {
+      "general": "Общие",
+      "maintenance": "Технические работы",
+      "debug": "Отладка",
+      "motdFrames": "Кадры MOTD",
+      "profiles": "Профили"
+    },
+    "fields": {
+      "colorFormat": {
+        "label": "Формат цвета",
+        "description": "Формат разбора текста MOTD/подсказки: AUTO определяет формат автоматически; выберите конкретный (MINI_MESSAGE, LEGACY_AMPERSAND, HEX_AMPERSAND, JSON...), если в тексте встречаются символы < или >."
+      },
+      "activeProfile": {
+        "label": "Активный профиль",
+        "description": "Какой профиль показывается по умолчанию. Также можно менять на лету командой /bettermotd profile <id>."
+      },
+      "placeholders": {
+        "label": "Включить плейсхолдеры",
+        "description": "Включает %online%, %max%, %version%, %profile%, %preset%, %motd_frame% и %time% в тексте MOTD/подсказки."
+      },
+      "placeholderAPI": {
+        "label": "Включить PlaceholderAPI",
+        "description": "Также разворачивает плейсхолдеры PlaceholderAPI в тексте MOTD/подсказки. Требует установленный плагин PlaceholderAPI."
+      },
+      "maintenanceEnabled": {
+        "label": "Режим техработ включён",
+        "description": "Пока включено, в списке серверов показывается профиль техработ ниже, а игроков без права обхода можно кикать при входе."
+      },
+      "maintenanceProfile": {
+        "label": "Профиль техработ",
+        "description": "Профиль, показываемый в списке серверов, пока включён режим техработ."
+      },
+      "bypassPermission": {
+        "label": "Право обхода",
+        "description": "Игроки с этим правом видят обычный MOTD и по-прежнему могут заходить во время техработ."
+      },
+      "kickMessage": {
+        "label": "Сообщение при кике"
+      },
+      "debugSelfTest": {
+        "label": "Самопроверка",
+        "description": "Запускает внутреннюю самопроверку BetterMOTD при старте. На боевом сервере держите выключенной."
+      },
+      "debugVerbose": {
+        "label": "Подробные логи",
+        "description": "Пишет дополнительные диагностические подробности. Включайте только при разборе проблем с конфигурацией."
+      },
+      "selectionMode": {
+        "label": "Режим выбора",
+        "description": "RANDOM - случайный пресет при каждом пинге. STICKY_PER_IP - случайный выбор, затем закрепляется за IP. HASHED_PER_IP - стабильный выбор на основе IP. ROTATE - переход к следующему пресету при каждом пинге."
+      },
+      "stickyTtlSeconds": {
+        "label": "Время закрепления (сек)"
+      },
+      "stickyMaxEntries": {
+        "label": "Макс. записей закрепления"
+      },
+      "stickyCleanup": {
+        "label": "Очистка закрепления (раз в N пингов)"
+      }
+    },
+    "playerCount": {
+      "title": "Настройки счётчика игроков (только Paper)",
+      "disableHover": "Отключить всплывающий список игроков",
+      "hidePlayerCount": "Полностью скрыть счётчик игроков",
+      "hoverLines": "Строки всплывающей подсказки",
+      "fakePlayers": {
+        "label": "Фейковые игроки",
+        "valuePlaceholder": "static: 5, random: 2:8, percent: 25%",
+        "description": "Добавляет фейковых игроков к показанному счётчику. static - фиксированное число, random - случайное значение в диапазоне при каждом пинге, percent - добавляет процент от реального числа."
+      },
+      "justXMore": {
+        "label": "Показывать «online + X»",
+        "description": "Показывает реальное число онлайн плюс фиксированное дополнительное число вместо настоящего максимума игроков."
+      },
+      "maxPlayers": {
+        "label": "Фиксированный максимум игроков",
+        "description": "Переопределяет число максимума игроков, показываемое в списке серверов, фиксированным значением."
+      }
+    },
+    "preset": {
+      "title": "Пресеты",
+      "id": "ID пресета",
+      "icon": "Файл иконки",
+      "weight": "Вес",
+      "motdLines": "Строки MOTD",
+      "add": "Добавить пресет",
+      "remove": "Удалить пресет"
+    },
+    "addProfile": "Добавить профиль",
+    "addProfilePlaceholder": "Имя нового профиля",
+    "removeProfile": "Удалить профиль",
+    "removeProfileTitle": "Удалить профиль «{{name}}»?"
   },
   "propertyKeys": {
     "motd": "MOTD",

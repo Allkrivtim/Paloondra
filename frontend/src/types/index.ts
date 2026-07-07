@@ -203,3 +203,95 @@ export interface OpEntry {
   level: number;
   bypassesPlayerLimit: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// MOTD (BetterMOTD plugin config.yml)
+// ---------------------------------------------------------------------------
+// Mirrors backend's motd.service.ts KNOWN_TOP_LEVEL_KEYS. config.yml's own
+// shape is nested and dynamic (profile names and preset arrays are up to
+// the user), so this is a partial, hand-kept-in-sync shape - not a full
+// schema - matching every field this tab's form actually edits.
+
+export interface MotdPresetConditions {
+  hostnames?: string[];
+  hostnameContains?: string[];
+  minProtocol?: number;
+  maxProtocol?: number;
+  minOnline?: number;
+  maxOnline?: number;
+}
+
+export interface MotdPreset {
+  id: string;
+  weight?: number;
+  icon?: string;
+  icons?: string[];
+  conditions?: MotdPresetConditions;
+  motd: string[];
+}
+
+export interface MotdFakePlayers {
+  enabled: boolean;
+  mode: 'static' | 'random' | 'percent';
+  value: string;
+}
+
+export interface MotdJustXMore {
+  enabled: boolean;
+  x: number;
+}
+
+export interface MotdMaxPlayersOverride {
+  enabled: boolean;
+  value: number;
+}
+
+export interface MotdPlayerCount {
+  disableHover?: boolean;
+  hidePlayerCount?: boolean;
+  hoverLines?: string[];
+  fakePlayers?: MotdFakePlayers;
+  justXMore?: MotdJustXMore;
+  maxPlayers?: MotdMaxPlayersOverride;
+}
+
+export type MotdSelectionMode = 'RANDOM' | 'STICKY_PER_IP' | 'HASHED_PER_IP' | 'ROTATE';
+
+export interface MotdProfile {
+  selectionMode?: MotdSelectionMode;
+  stickyTtlSeconds?: number;
+  stickyMaxEntriesPerProfile?: number;
+  stickyCleanupEveryNPings?: number;
+  playerCount?: MotdPlayerCount;
+  presets: MotdPreset[];
+}
+
+export interface MotdMaintenance {
+  enabled: boolean;
+  profile?: string;
+  bypassPermission?: string;
+  kickMessage?: string;
+}
+
+export interface MotdValues {
+  colorFormat?: string;
+  activeProfile?: string;
+  placeholders?: { enabled: boolean };
+  placeholderAPI?: { enabled: boolean };
+  maintenance?: MotdMaintenance;
+  debug?: { selfTest: boolean; verbose: boolean };
+  profiles?: Record<string, MotdProfile>;
+  motdFrames?: string[];
+}
+
+export interface MotdReloadOutcome {
+  response?: string;
+  error?: string;
+}
+
+export interface MotdDocument {
+  path: string;
+  raw: string;
+  values: MotdValues;
+  reload?: MotdReloadOutcome;
+}

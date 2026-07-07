@@ -20,6 +20,7 @@ const ScheduledTasks = lazy(() => import('./components/tabs/ScheduledTasks'));
 const ServerProperties = lazy(() => import('./components/tabs/ServerProperties'));
 const Whitelist = lazy(() => import('./components/tabs/Whitelist'));
 const Ops = lazy(() => import('./components/tabs/Ops'));
+const Motd = lazy(() => import('./components/tabs/Motd'));
 
 function TabFallback() {
   return (
@@ -107,6 +108,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<TabFallback />}>
                     <Ops />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="motd"
+                element={
+                  <Suspense fallback={<TabFallback />}>
+                    <Motd />
                   </Suspense>
                 }
               />

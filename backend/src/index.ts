@@ -14,6 +14,7 @@ import serverPropertiesRoutes from './routes/serverProperties.routes';
 import serverFilesRoutes from './routes/serverFiles.routes';
 import whitelistRoutes from './routes/whitelist.routes';
 import opsRoutes from './routes/ops.routes';
+import motdRoutes from './routes/motd.routes';
 import rconRoutes from './routes/rcon.routes';
 import auditLogRoutes from './routes/auditLog.routes';
 import { setupWebSockets } from './ws';
@@ -42,6 +43,7 @@ app.use('/api/server-properties', serverPropertiesRoutes);
 app.use('/api/server-files', serverFilesRoutes);
 app.use('/api/whitelist', whitelistRoutes);
 app.use('/api/ops', opsRoutes);
+app.use('/api/motd', motdRoutes);
 app.use('/api/rcon', rconRoutes);
 app.use('/api/audit-log', auditLogRoutes);
 

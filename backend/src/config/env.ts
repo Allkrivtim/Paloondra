@@ -177,6 +177,14 @@ export const env = {
     rootDir: serverRootDir,
   },
 
+  betterMotd: {
+    // Optional override for the BetterMOTD plugin's config.yml, in case it
+    // isn't at the standard SERVER_ROOT_DIR/plugins/BetterMOTD/config.yml
+    // location (e.g. a renamed plugin folder). Unset means derive it from
+    // SERVER_ROOT_DIR instead.
+    configPath: process.env.BETTERMOTD_CONFIG_PATH?.trim() || undefined,
+  },
+
   modrinth: {
     apiUrl: optional('MODRINTH_API_URL', 'https://api.modrinth.com/v2'),
   },

@@ -18,6 +18,7 @@ export default function Layout() {
     { to: '/server-properties', label: t('nav.serverProperties') },
     { to: '/whitelist', label: t('nav.whitelist') },
     { to: '/ops', label: t('nav.ops') },
+    { to: '/motd', label: t('nav.motd') },
   ];
 
   return (
