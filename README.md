@@ -5,9 +5,9 @@ server process or its files directly** — every action goes through one of
 these external channels:
 
 - **Shell scripts** (`START_SCRIPT` / `STOP_SCRIPT` / `RESTART_SCRIPT` / `BACKUP_SCRIPT`), run over the same SSH connection as the terminal, from inside `SCRIPTS_DIR` on the target server
-- **RCON** (`rcon-client`) for in-game commands, the player list, quick moderation actions, broadcasts, and scheduled RCON tasks
+- **RCON** (`rcon-client`) for in-game commands, the player list, quick moderation actions, broadcasts, scheduled RCON tasks, and reloading BetterMOTD after a config save - one persistent connection, reused for all of it
 - **SSH** (`ssh2`) for the interactive terminal and host metrics (`top`/`free`/`df`)
-- **SFTP** (`ssh2`'s SFTP subsystem, or `sudo` over SSH exec) for the file manager, the plugins list, backups, the server.properties/bukkit.yml/spigot.yml editors, and reading whitelist.json/ops.json
+- **SFTP** (`ssh2`'s SFTP subsystem, or `sudo` over SSH exec) for the file manager, the plugins list, backups, the server.properties/bukkit.yml/spigot.yml/BetterMOTD config.yml editors, and reading whitelist.json/ops.json
 - **node-cron** (backend-local) for scheduled restarts/RCON commands - nothing external, just a timer that calls the same RCON/scripts channels above
 - **The public Modrinth API** (`api.modrinth.com`) - the one exception to "only talks to your one configured server" - used only for the plugin store's search/browse/install, over plain HTTPS, no credentials involved
 
@@ -35,13 +35,14 @@ the short version, skip to [Quick start](#quick-start).
 10. [bukkit.yml & spigot.yml](#bukkityml--spigotyml)
 11. [Whitelist](#whitelist)
 12. [Ops](#ops)
-13. [Audit log](#audit-log)
-14. [Localization](#localization)
-15. [Running in production](#running-in-production)
-16. [Running with systemd](#running-with-systemd)
-17. [Docker](#docker)
-18. [Development mode](#development-mode)
-19. [Troubleshooting](#troubleshooting)
+13. [MOTD (BetterMOTD)](#motd-bettermotd)
+14. [Audit log](#audit-log)
+15. [Localization](#localization)
+16. [Running in production](#running-in-production)
+17. [Running with systemd](#running-with-systemd)
+18. [Docker](#docker)
+19. [Development mode](#development-mode)
+20. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -210,6 +211,12 @@ backend refusing to start.
 | Variable | Example | Meaning |
 |---|---|---|
 | `SERVER_ROOT_DIR` | `/home/minecraft/server` | Absolute path, on the target server, to the directory containing `server.properties`, `bukkit.yml`, `spigot.yml`, `whitelist.json` and `ops.json`. All five are found by their standard filenames inside this one directory. |
+
+### MOTD (BetterMOTD)
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `BETTERMOTD_CONFIG_PATH` | `/home/minecraft/server/plugins/BetterMOTD/config.yml` | Optional. The MOTD tab reads/writes the [BetterMOTD](https://github.com/AREKKUZZERA/Better-MOTD) plugin's `config.yml` at `SERVER_ROOT_DIR/plugins/BetterMOTD/config.yml` by default - only set this if that file lives somewhere else. |
 
 ### Plugin store config
 
@@ -578,6 +585,52 @@ Adding and removing operators is unaffected by this and stays instant.
 
 ---
 
+## MOTD (BetterMOTD)
+
+A dedicated tab for configuring the
+[BetterMOTD](https://github.com/AREKKUZZERA/Better-MOTD) plugin's
+`config.yml` - server-list MOTD text, icons, per-preset conditions and
+player-count display. Like server.properties/bukkit.yml/spigot.yml, it
+opens in a **Form** view by default with a **Raw** YAML toggle as a
+fallback.
+
+- **File location**: `SERVER_ROOT_DIR/plugins/BetterMOTD/config.yml` by
+  default, overridable with `BETTERMOTD_CONFIG_PATH` (see
+  [Every `.env` variable, explained](#every-env-variable-explained)) if
+  BetterMOTD's plugin folder was renamed or moved. If the file doesn't
+  exist yet (the plugin hasn't been started once to generate its default
+  config), the tab shows a clear "not found" message instead of an error.
+- **Form view**: general settings (color format, active profile,
+  placeholders), maintenance mode, debug flags, and a **Profiles** section
+  covering everything BetterMOTD's config supports per-profile - selection
+  mode (`RANDOM`/`STICKY_PER_IP`/`HASHED_PER_IP`/`ROTATE`) and its sticky
+  settings, player-count options (fake players, "online + X more", a fixed
+  max-player override, hover-list lines or hiding the count entirely), and
+  a list of **presets** per profile (ID, icon filename, weight, and its
+  MOTD lines) with add/remove/reorder controls. Profiles themselves can
+  also be added or removed. Every MOTD/hover-text line is a raw
+  [MiniMessage](https://github.com/KyoriPowered/adventure-text-minimessage)
+  string with a short tag legend and a link to Kyori's own web preview
+  next to each list - Paloondra doesn't attempt to render a
+  Minecraft-accurate preview itself, only shows you what you typed.
+- **Round-tripping**: identical approach to bukkit.yml/spigot.yml - the
+  backend parses the file with the `yaml` package's `Document`/AST API and
+  replaces only the top-level section(s) you actually changed (e.g. saving
+  a preset edit rewrites `profiles`, but leaves `maintenance`, `debug`,
+  comments, and any custom keys BetterMOTD or another plugin added
+  untouched). The Raw view is validated the same way as the other YAML
+  editors (client-side on every keystroke, backend again before writing).
+- **Applying changes**: after a successful save, Paloondra automatically
+  runs BetterMOTD's own live-reload command over RCON - `bettermotd
+  reload` - so changes take effect immediately, no server restart and
+  no vanilla `/reload` involved (that command is never used anywhere in
+  this panel). A **Reload BetterMOTD** button is also available to re-run
+  it manually, e.g. after editing `config.yml` directly outside Paloondra.
+  If the reload command's response looks like a failure, it's shown as a
+  separate error toast - the save itself still succeeded either way.
+
+---
+
 ## Audit log
 
 A small, append-only history of mutating admin actions - script runs
@@ -913,6 +966,13 @@ the server hasn't picked up a changed password yet (restart it).
 these tabs - see
 [Every `.env` variable, explained](#every-env-variable-explained).
 
+**MOTD tab shows "config not found"**
+That's different from the "not configured" message above - `SERVER_ROOT_DIR`
+is set, but `plugins/BetterMOTD/config.yml` doesn't exist at the expected
+location yet. Install the BetterMOTD plugin and start the Minecraft server
+once so it generates its default config, or set `BETTERMOTD_CONFIG_PATH` if
+the plugin's folder was renamed/moved.
+
 **Whitelist add/remove or Ops add/remove shows an error toast with the player's name in it**
 That's the Minecraft server's own RCON response, not a Paloondra bug — most
 often "that player does not exist" because the name is offline-mode-only
@@ -1064,6 +1124,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 | **Server Config** | Friendly form + raw-text editor for `server.properties`, `bukkit.yml`, and `spigot.yml` alike, with validate-before-save and a restart-required banner for the YAML files - see [server.properties editor](#serverproperties-editor) and [bukkit.yml & spigot.yml](#bukkityml--spigotyml) |
 | **Whitelist** | View/add/remove whitelisted players and toggle the whitelist on/off, all via RCON (instant, no restart), plus a manual "reload from disk" for out-of-band edits - see [Whitelist](#whitelist) |
 | **Ops** | View/add/remove operators via RCON (instant), plus a per-player permission level editor (edits `ops.json` directly, requires a restart) - see [Ops](#ops) |
+| **MOTD** | Form + raw-text editor for the BetterMOTD plugin's `config.yml` (profiles, presets, maintenance mode, player-count display), auto-reloaded live over RCON after every save - see [MOTD (BetterMOTD)](#motd-bettermotd) |
 
 ## Notes on the implementation
 
@@ -1086,6 +1147,17 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   waiting out a pending backoff timer. The SSH terminal tab opens a
   dedicated connection per browser session and reconnects automatically if
   it drops.
+- **RCON is a single persistent connection**, opened once
+  (`backend/src/services/rcon.service.ts`) and reused for every RCON-backed
+  feature - the Dashboard's quick actions, the RCON Console tab, Whitelist/
+  Ops, scheduled RCON tasks, and the MOTD tab's reload - rather than a new
+  TCP connection per command. "Persistent" here means one connection held
+  open by the Paloondra backend and reused; RCON has no concept of
+  attaching to a session from when the Minecraft server itself started,
+  since every client just opens its own connection. Concurrent commands on
+  that one connection are serialized in order by `rcon-client`'s own
+  internal request queue, so nothing can interleave or corrupt another
+  in-flight command's response.
 - The `dev` known-vulnerability scan (`npm audit`) flags esbuild/vite's
   **dev server** (not the production build) for a request-forwarding issue
   fixed only in vite 8 — a breaking upgrade out of scope here. Don't expose

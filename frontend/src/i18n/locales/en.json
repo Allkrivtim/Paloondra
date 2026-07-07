@@ -36,7 +36,8 @@
     "scheduler": "Scheduled Tasks",
     "serverProperties": "Server Config",
     "whitelist": "Whitelist",
-    "ops": "Ops"
+    "ops": "Ops",
+    "motd": "MOTD"
   },
   "header": {
     "language": "Language",
@@ -657,6 +658,118 @@
     "failedToChangeLevel": "Failed to change operator level",
     "removeTitle": "Remove \"{{name}}\" as an operator?",
     "levelChangeRestartMessage": "Operator level changes require a full server restart to take effect. Adding/removing operators applies instantly."
+  },
+  "motd": {
+    "title": "MOTD (BetterMOTD)",
+    "loading": "Loading BetterMOTD config...",
+    "failedToLoad": "Failed to load BetterMOTD config",
+    "saved": "BetterMOTD config saved",
+    "failedToSave": "Failed to save BetterMOTD config",
+    "reload": "Reload BetterMOTD",
+    "reloadTooltip": "Runs \"bettermotd reload\" over RCON to apply the config live, without restarting the server",
+    "reloadedToast": "BetterMOTD reloaded",
+    "failedToReload": "Failed to reload BetterMOTD",
+    "reloadFailedToast": "Config saved, but the reload failed: {{error}}",
+    "otherKeysNotice": "Any other keys already in config.yml are preserved untouched - use Raw mode to edit them.",
+    "addLine": "Add line",
+    "removeLine": "Remove line",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "miniMessageHint": "MOTD text uses MiniMessage formatting, e.g.",
+    "miniMessagePreviewLink": "open the MiniMessage web preview",
+    "sections": {
+      "general": "General",
+      "maintenance": "Maintenance",
+      "debug": "Debug",
+      "motdFrames": "MOTD frames",
+      "profiles": "Profiles"
+    },
+    "fields": {
+      "colorFormat": {
+        "label": "Color format",
+        "description": "Text format used to parse MOTD/hover text: AUTO detects the format automatically; pick a specific one (MINI_MESSAGE, LEGACY_AMPERSAND, HEX_AMPERSAND, JSON...) if your text contains literal < or > characters."
+      },
+      "activeProfile": {
+        "label": "Active profile",
+        "description": "Which profile is shown by default. Can also be changed live with /bettermotd profile <id>."
+      },
+      "placeholders": {
+        "label": "Enable placeholders",
+        "description": "Turns on %online%, %max%, %version%, %profile%, %preset%, %motd_frame% and %time% in MOTD/hover text."
+      },
+      "placeholderAPI": {
+        "label": "Enable PlaceholderAPI",
+        "description": "Also expands PlaceholderAPI placeholders in MOTD/hover text. Requires the PlaceholderAPI plugin to be installed."
+      },
+      "maintenanceEnabled": {
+        "label": "Maintenance mode enabled",
+        "description": "While on, the server list shows the maintenance profile below and can kick joining players who lack the bypass permission."
+      },
+      "maintenanceProfile": {
+        "label": "Maintenance profile",
+        "description": "Profile shown in the server list while maintenance mode is enabled."
+      },
+      "bypassPermission": {
+        "label": "Bypass permission",
+        "description": "Players with this permission see the normal MOTD and can still join during maintenance."
+      },
+      "kickMessage": {
+        "label": "Kick message"
+      },
+      "debugSelfTest": {
+        "label": "Self-test",
+        "description": "Runs BetterMOTD's internal self-test on startup. Leave off in production."
+      },
+      "debugVerbose": {
+        "label": "Verbose logging",
+        "description": "Logs extra diagnostic detail. Leave off unless you're troubleshooting a config issue."
+      },
+      "selectionMode": {
+        "label": "Selection mode",
+        "description": "RANDOM picks a new preset every ping. STICKY_PER_IP picks randomly, then keeps the same preset for a given IP. HASHED_PER_IP is a stable pick based on IP. ROTATE moves to the next preset every ping."
+      },
+      "stickyTtlSeconds": {
+        "label": "Sticky TTL (seconds)"
+      },
+      "stickyMaxEntries": {
+        "label": "Sticky max entries"
+      },
+      "stickyCleanup": {
+        "label": "Sticky cleanup (every N pings)"
+      }
+    },
+    "playerCount": {
+      "title": "Player count options (Paper only)",
+      "disableHover": "Disable the online-players hover list",
+      "hidePlayerCount": "Hide the player count entirely",
+      "hoverLines": "Hover lines",
+      "fakePlayers": {
+        "label": "Fake players",
+        "valuePlaceholder": "static: 5, random: 2:8, percent: 25%",
+        "description": "Adds fake players to the shown count. static is a fixed number, random picks within a range each ping, percent adds a percentage of the real count."
+      },
+      "justXMore": {
+        "label": "Show \"online + X more\"",
+        "description": "Shows the real online count plus a fixed extra number, instead of the true max players."
+      },
+      "maxPlayers": {
+        "label": "Fixed max players",
+        "description": "Overrides the max-player count shown in the server list with a fixed value."
+      }
+    },
+    "preset": {
+      "title": "Presets",
+      "id": "Preset ID",
+      "icon": "Icon filename",
+      "weight": "Weight",
+      "motdLines": "MOTD lines",
+      "add": "Add preset",
+      "remove": "Remove preset"
+    },
+    "addProfile": "Add profile",
+    "addProfilePlaceholder": "New profile name",
+    "removeProfile": "Remove profile",
+    "removeProfileTitle": "Remove profile \"{{name}}\"?"
   },
   "propertyKeys": {
     "motd": "MOTD",
