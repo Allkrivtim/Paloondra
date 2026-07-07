@@ -28,7 +28,7 @@
   },
   "nav": {
     "dashboard": "Панель управления",
-    "rcon": "RCON-консоль",
+    "console": "Консоль",
     "ssh": "SSH-терминал",
     "sftp": "Файловый менеджер",
     "plugins": "Плагины и моды",
@@ -108,15 +108,18 @@
     "noActions": "Пока нет записанных действий.",
     "failedToLoad": "Не удалось загрузить журнал действий"
   },
-  "rcon": {
-    "connected": "RCON подключён",
-    "disconnected": "RCON отключён",
-    "reconnecting": " · переподключение к панели...",
-    "noCommandsYet": "Команды ещё не отправлялись. Попробуйте «list» или «help».",
-    "emptyResponse": "(пустой ответ)",
-    "placeholderConnected": "Введите команду RCON...",
+  "console": {
+    "notConfigured": "Консоль не настроена. Укажите MC_CONTAINER в backend/.env — имя Docker-контейнера сервера Minecraft, чтобы включить эту вкладку.",
+    "connected": "Консоль подключена",
+    "disconnected": "Консоль отключена",
+    "reconnectingToPanel": " · переподключение к панели...",
+    "noOutputYet": "Вывод сервера пока отсутствует.",
+    "placeholderConnected": "Введите команду консоли сервера...",
     "placeholderReconnecting": "Переподключение...",
-    "send": "Отправить"
+    "send": "Отправить",
+    "jumpToLatest": "К последним",
+    "dockerNote": "Обращается напрямую к Docker-контейнеру",
+    "dockerNoteTooltip": "Выполняет «docker logs»/«docker exec» через SSH — пользователю SSH нужно право запускать docker на целевом хосте (например, членство в группе docker)."
   },
   "ssh": {
     "connecting": "Подключение...",

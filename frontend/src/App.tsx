@@ -8,7 +8,7 @@ import Spinner from './components/common/Spinner';
 import Layout from './components/Layout';
 import Login from './components/Login';
 import Dashboard from './components/tabs/Dashboard';
-import RconConsole from './components/tabs/RconConsole';
+import Console from './components/tabs/Console';
 
 // Lazy-loaded: none of these are needed for the initial Dashboard render,
 // so they're split into their own chunks and fetched on first visit.
@@ -46,7 +46,7 @@ export default function App() {
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="rcon" element={<RconConsole />} />
+              <Route path="console" element={<Console />} />
               <Route
                 path="ssh"
                 element={
