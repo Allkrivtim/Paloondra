@@ -11,7 +11,7 @@
 // never use) - several MB even gzipped. Importing the core editor API plus
 // only the specific basic-language contributions this app actually uses
 // (matching monacoLanguageFor in components/sftp/format.ts) keeps this to
-// what's needed: json/yaml/js/ts/xml/shell/ini/markdown syntax highlighting.
+// what's needed: json/yaml/js/ts/xml/shell/ini/markdown/lua syntax highlighting.
 import { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
 // JSON is only shipped as an advanced "language service" (schema validation
@@ -23,6 +23,7 @@ import 'monaco-editor/esm/vs/basic-languages/xml/xml.contribution.js';
 import 'monaco-editor/esm/vs/basic-languages/shell/shell.contribution.js';
 import 'monaco-editor/esm/vs/basic-languages/ini/ini.contribution.js';
 import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution.js';
+import 'monaco-editor/esm/vs/basic-languages/lua/lua.contribution.js';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
 // A single generic worker handles tokenization/basic editing for every
