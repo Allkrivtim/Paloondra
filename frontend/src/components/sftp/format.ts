@@ -30,7 +30,7 @@ export function formatDate(ts: number): string {
 
 const TEXT_EXTENSIONS = new Set([
   'txt', 'yml', 'yaml', 'json', 'properties', 'cfg', 'conf', 'toml', 'ini',
-  'log', 'md', 'sh', 'bash', 'xml', 'js', 'ts', 'mcfunction', 'env', 'gitignore',
+  'log', 'md', 'sh', 'bash', 'xml', 'js', 'ts', 'mcfunction', 'env', 'gitignore', 'lua',
 ]);
 
 export function looksLikeTextFile(name: string): boolean {
@@ -64,6 +64,8 @@ export function monacoLanguageFor(name: string): string {
       return 'ini';
     case 'md':
       return 'markdown';
+    case 'lua':
+      return 'lua';
     default:
       return 'plaintext';
   }

@@ -3,13 +3,13 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { URL } from 'url';
 import { verifyToken } from '../auth/auth';
 import { handleConsoleConnection } from './consoleSocket';
-import { handleRconConnection } from './rconSocket';
+import { handleGameConsoleConnection } from './gameConsoleSocket';
 import { handleSshConnection } from './sshSocket';
 import { handleMetricsConnection } from './metricsSocket';
 
 const ROUTES: Record<string, (ws: WebSocket) => void> = {
   '/ws/console': handleConsoleConnection,
-  '/ws/rcon': handleRconConnection,
+  '/ws/game-console': handleGameConsoleConnection,
   '/ws/ssh': handleSshConnection,
   '/ws/metrics': handleMetricsConnection,
 };

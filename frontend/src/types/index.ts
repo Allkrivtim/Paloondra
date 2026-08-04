@@ -37,12 +37,10 @@ export interface SftpEntry {
   modifiedAt: number;
 }
 
-export interface RconLogEntry {
-  id: string;
-  command: string;
-  response?: string;
-  error?: string;
-  timestamp: number;
+export interface GameConsoleStatus {
+  configured: boolean;
+  following: boolean;
+  lastError: string | null;
 }
 
 // ---------------------------------------------------------------------------

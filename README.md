@@ -7,6 +7,7 @@ these external channels:
 - **Shell scripts** (`START_SCRIPT` / `STOP_SCRIPT` / `RESTART_SCRIPT` / `BACKUP_SCRIPT`), run over the same SSH connection as the terminal, from inside `SCRIPTS_DIR` on the target server
 - **RCON** (`rcon-client`) for in-game commands, the player list, quick moderation actions, broadcasts, scheduled RCON tasks, and reloading BetterMOTD after a config save - one persistent connection, reused for all of it
 - **SSH** (`ssh2`) for the interactive terminal and host metrics (`top`/`free`/`df`)
+- **Docker, over the same SSH connection** (`docker logs -f` / `docker exec ... mc-send-to-console`) for the native Console tab - talks directly to the Minecraft server's own container, not RCON
 - **SFTP** (`ssh2`'s SFTP subsystem, or `sudo` over SSH exec) for the file manager, the plugins list, backups, the server.properties/bukkit.yml/spigot.yml/BetterMOTD config.yml editors, and reading whitelist.json/ops.json
 - **node-cron** (backend-local) for scheduled restarts/RCON commands - nothing external, just a timer that calls the same RCON/scripts channels above
 - **The public Modrinth API** (`api.modrinth.com`) - the one exception to "only talks to your one configured server" - used only for the plugin store's search/browse/install, over plain HTTPS, no credentials involved
@@ -28,21 +29,22 @@ the short version, skip to [Quick start](#quick-start).
 3. [Every `.env` variable, explained](#every-env-variable-explained)
 4. [Creating users](#creating-users)
 5. [Enabling sudo mode for the file manager](#enabling-sudo-mode-for-the-file-manager)
-6. [Plugins & the plugin store](#plugins--the-plugin-store)
-7. [Scheduled tasks](#scheduled-tasks)
-8. [Backups](#backups)
-9. [server.properties editor](#serverproperties-editor)
-10. [bukkit.yml & spigot.yml](#bukkityml--spigotyml)
-11. [Whitelist](#whitelist)
-12. [Ops](#ops)
-13. [MOTD (BetterMOTD)](#motd-bettermotd)
-14. [Audit log](#audit-log)
-15. [Localization](#localization)
-16. [Running in production](#running-in-production)
-17. [Running with systemd](#running-with-systemd)
-18. [Docker](#docker)
-19. [Development mode](#development-mode)
-20. [Troubleshooting](#troubleshooting)
+6. [Console](#console)
+7. [Plugins & the plugin store](#plugins--the-plugin-store)
+8. [Scheduled tasks](#scheduled-tasks)
+9. [Backups](#backups)
+10. [server.properties editor](#serverproperties-editor)
+11. [bukkit.yml & spigot.yml](#bukkityml--spigotyml)
+12. [Whitelist](#whitelist)
+13. [Ops](#ops)
+14. [MOTD (BetterMOTD)](#motd-bettermotd)
+15. [Audit log](#audit-log)
+16. [Localization](#localization)
+17. [Running in production](#running-in-production)
+18. [Running with systemd](#running-with-systemd)
+19. [Docker](#docker)
+20. [Development mode](#development-mode)
+21. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -128,6 +130,13 @@ There is no separate config for the frontend beyond the API URL (see
 | `RCON_HOST` | `127.0.0.1` | Same host as the Minecraft server, unless RCON is exposed elsewhere. |
 | `RCON_PORT` | `25575` | Must match `rcon.port` in `server.properties`. |
 | `RCON_PASSWORD` | `some-strong-password` | Must match `rcon.password` in `server.properties`. |
+
+### Console (Docker)
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `MC_CONTAINER` | `mc` | Optional. Docker container name/id of the Minecraft server itself (the `itzg/minecraft-server` image), on the target host. Backs the [Console](#console) tab - unset means that tab shows a "not configured" message. |
+| `CONSOLE_TAIL_LINES` | `200` | How many historical log lines `docker logs -f --tail` fetches when the Console tab starts following - defaults to 200. |
 
 ### SSH / SFTP
 
@@ -348,6 +357,55 @@ SUDO_PATH=/usr/bin/sudo
 
 Restart the backend. Test it by opening the File Manager tab and browsing
 to a directory `SSH_USER` doesn't directly own.
+
+---
+
+## Console
+
+A native, Pterodactyl-style console for a Minecraft server running in
+Docker (the [`itzg/minecraft-server`](https://github.com/itzg/docker-minecraft-server)
+image) - a single scrolling view of the container's real console output,
+with a command input at the bottom that writes straight into it. This
+talks **directly to the Docker container over SSH, not RCON**:
+
+- **Output**: the backend runs `docker logs -f --tail CONSOLE_TAIL_LINES
+  MC_CONTAINER` over the same SSH connection used by the terminal/metrics/
+  scripts (`ssh.service.ts`), and streams stdout/stderr to the tab over a
+  WebSocket. On open, the tab shows the last `CONSOLE_TAIL_LINES` lines
+  (200 by default) then keeps following live. This is a single persistent
+  backend-side stream shared by every connected browser tab - it starts
+  following on backend startup (if configured) and keeps a bounded
+  in-memory history (1000 lines) so a newly-opened tab isn't empty.
+- **Input**: typed commands are sent with `docker exec MC_CONTAINER
+  mc-send-to-console -- <command>` - `mc-send-to-console` is the
+  itzg/minecraft-server image's own helper for writing directly to the
+  server's console stdin. There's no RCON round-trip and nothing to
+  correlate a response to - whatever the server prints in response shows
+  up naturally in the same streamed log a moment later, exactly like
+  watching a real terminal. Command history (↑/↓) works the same as
+  before.
+- **Auto-scroll**: the log follows new output automatically; scrolling up
+  pauses auto-follow and shows a **Jump to latest** button instead of
+  fighting you for scroll position.
+- **Reconnection**: if the SSH connection drops, the `docker logs`
+  process exits, or the container itself isn't running, the tab shows a
+  clear status ("reconnecting...", with the last error message) and keeps
+  retrying with the same exponential backoff (2s → 30s) as RCON/SSH. The
+  moment the container is reachable again, it resumes following - no
+  manual action needed.
+- **Requirements**: `MC_CONTAINER` (the container's name or id, e.g. `mc`)
+  must be set - see [Every `.env` variable, explained](#every-env-variable-explained).
+  Optional like `PLUGINS_DIR`/`BACKUPS_DIR` - if unset, the tab shows a
+  clear "not configured" message instead of failing startup. The SSH user
+  (`SSH_USER`) needs permission to run `docker` on the target host -
+  typically membership in the `docker` group, or equivalent access.
+  Neither Docker Compose nor a `dockerode`/Docker API client is involved;
+  it's the same "run a plain command over the existing SSH connection"
+  approach as everything else in this panel.
+- RCON is **not** used by this tab at all, and is otherwise completely
+  unaffected - the Dashboard's quick actions, Whitelist, Ops, scheduled
+  RCON tasks, and the MOTD tab's reload all keep working through RCON
+  exactly as before.
 
 ---
 
@@ -945,7 +1003,7 @@ network interface.
 The error list printed on startup is the full set of problems — fix each
 line it names. This is deliberate: Paloondra won't run half-configured.
 
-**Dashboard shows "Offline" / RCON console shows "disconnected"**
+**Dashboard shows "Offline"**
 - Check `RCON_HOST`/`RCON_PORT`/`RCON_PASSWORD` match `server.properties`
   exactly (`rcon.port`, `rcon.password`) and `enable-rcon=true` is set.
 - Confirm the Minecraft server was restarted after changing
@@ -954,6 +1012,27 @@ line it names. This is deliberate: Paloondra won't run half-configured.
   `nc -zv <RCON_HOST> <RCON_PORT>`. If that fails, it's a network/firewall
   issue, not a Paloondra issue — check the Minecraft host's firewall allows
   the RCON port from wherever the backend runs.
+
+**Console tab shows "not configured"**
+`MC_CONTAINER` isn't set in `backend/.env` - see
+[Every `.env` variable, explained](#every-env-variable-explained). This is
+unrelated to RCON; the Console tab talks to the Docker container directly.
+
+**Console tab shows "disconnected" / keeps reconnecting**
+- Confirm `MC_CONTAINER` exactly matches the container name/id (`docker ps`
+  on the target host).
+- Confirm the SSH user (`SSH_USER`) can actually run `docker` on the target
+  host - try `ssh <user>@<host> docker ps` by hand. If that fails with a
+  permission error, add the user to the `docker` group (or grant equivalent
+  access) and reconnect - Paloondra runs `docker` exactly as that SSH user.
+- If the container simply isn't running yet, the tab keeps retrying with
+  backoff and resumes following automatically the moment it starts - no
+  action needed beyond starting the container.
+
+**Console tab command input does nothing / command doesn't reach the server**
+Check that `mc-send-to-console` exists inside the container (it ships with
+the `itzg/minecraft-server` image) - a failure here shows up as a system
+line directly in the console log, e.g. "Failed to send command: ...".
 
 **RCON commands fail with an auth-looking error**
 `RCON_PASSWORD` doesn't match `rcon.password` in `server.properties`, or
@@ -1115,7 +1194,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 | Tab | What it does |
 |---|---|
 | **Dashboard** | Online/offline status, Start/Stop/Restart buttons (run the configured scripts over SSH on the target server, output streams live), player count/TPS/host CPU/RAM/disk charts, online players with quick kick/ban/op/whitelist actions, a broadcast (`say`) box, and a recent-activity audit log panel |
-| **RCON Console** | Command input with history (↑/↓), live output log, auto-reconnect |
+| **Console** | Native, Pterodactyl-style server console - follows the Minecraft container's own live log (`docker logs -f`) and sends typed commands straight into its console (`docker exec ... mc-send-to-console`), command history (↑/↓), auto-scroll with a "jump to latest" button, auto-reconnect - see [Console](#console) |
 | **SSH Terminal** | Full interactive shell (xterm.js + ssh2 PTY), resizable, auto-reconnects a fresh session if the connection drops |
 | **File Manager** | SFTP (or sudo-mode) browser: navigate, upload/download, rename, delete, mkdir, drag & drop (upload from OS, move between folders), built-in Monaco editor for text files |
 | **Plugins & Mods** | Installed plugins (enable/disable/delete/download, real names parsed from `plugin.yml`), install by URL or drag-and-drop `.jar`, and a Modrinth-backed plugin store with search/filters/install - see [Plugins & the plugin store](#plugins--the-plugin-store). A banner at the top makes clear only plugins are supported; mod support isn't available yet |
@@ -1149,12 +1228,15 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   it drops.
 - **RCON is a single persistent connection**, opened once
   (`backend/src/services/rcon.service.ts`) and reused for every RCON-backed
-  feature - the Dashboard's quick actions, the RCON Console tab, Whitelist/
-  Ops, scheduled RCON tasks, and the MOTD tab's reload - rather than a new
-  TCP connection per command. "Persistent" here means one connection held
-  open by the Paloondra backend and reused; RCON has no concept of
-  attaching to a session from when the Minecraft server itself started,
-  since every client just opens its own connection. Concurrent commands on
+  feature - the Dashboard's quick actions, Whitelist/Ops, scheduled RCON
+  tasks, and the MOTD tab's reload - rather than a new TCP connection per
+  command. Note that the **Console** tab does *not* use RCON at all - it
+  talks directly to the Minecraft server's Docker console instead (see
+  [Console](#console)); RCON remains exactly as before for everything
+  else. "Persistent" here means one connection held open by the Paloondra
+  backend and reused; RCON has no concept of attaching to a session from
+  when the Minecraft server itself started, since every client just opens
+  its own connection. Concurrent commands on
   that one connection are serialized in order by `rcon-client`'s own
   internal request queue, so nothing can interleave or corrupt another
   in-flight command's response.

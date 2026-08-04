@@ -23,6 +23,7 @@ import { sshService } from './services/ssh.service';
 import { fileManagerService } from './services/fileManager.service';
 import { metricsService } from './services/metrics.service';
 import { schedulerService } from './services/scheduler.service';
+import { gameConsoleService } from './services/gameConsole.service';
 
 const app = express();
 
@@ -68,6 +69,7 @@ sshService.start();
 fileManagerService.start();
 metricsService.start();
 void schedulerService.start();
+gameConsoleService.start();
 
 function shutdown() {
   console.log('Shutting down...');

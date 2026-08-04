@@ -9,7 +9,7 @@ export default function Layout() {
 
   const TABS = [
     { to: '/', label: t('nav.dashboard'), end: true },
-    { to: '/rcon', label: t('nav.rcon') },
+    { to: '/console', label: t('nav.console') },
     { to: '/ssh', label: t('nav.ssh') },
     { to: '/sftp', label: t('nav.sftp') },
     { to: '/plugins', label: t('nav.plugins') },

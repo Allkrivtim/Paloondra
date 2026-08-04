@@ -177,6 +177,16 @@ export const env = {
     rootDir: serverRootDir,
   },
 
+  // Backs the Console tab: the Minecraft server's own Docker container,
+  // reached over the existing SSH connection - `docker logs -f` for output,
+  // `docker exec ... mc-send-to-console` for input. Optional, like
+  // PLUGINS_DIR/BACKUPS_DIR - unset means the tab shows a "not configured"
+  // message instead of failing startup.
+  docker: {
+    containerName: process.env.MC_CONTAINER?.trim() || undefined,
+    consoleTailLines: optionalInt('CONSOLE_TAIL_LINES', 200, { min: 1 }),
+  },
+
   betterMotd: {
     // Optional override for the BetterMOTD plugin's config.yml, in case it
     // isn't at the standard SERVER_ROOT_DIR/plugins/BetterMOTD/config.yml

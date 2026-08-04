@@ -28,7 +28,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "rcon": "RCON Console",
+    "console": "Console",
     "ssh": "SSH Terminal",
     "sftp": "File Manager",
     "plugins": "Plugins & Mods",
@@ -108,15 +108,18 @@
     "noActions": "No actions recorded yet.",
     "failedToLoad": "Failed to load audit log"
   },
-  "rcon": {
-    "connected": "RCON connected",
-    "disconnected": "RCON disconnected",
-    "reconnecting": " · reconnecting to panel...",
-    "noCommandsYet": "No commands sent yet. Try \"list\" or \"help\".",
-    "emptyResponse": "(empty response)",
-    "placeholderConnected": "Enter RCON command...",
+  "console": {
+    "notConfigured": "Console isn't configured. Set MC_CONTAINER in backend/.env to the Minecraft server's Docker container name to enable it.",
+    "connected": "Console connected",
+    "disconnected": "Console disconnected",
+    "reconnectingToPanel": " · reconnecting to panel...",
+    "noOutputYet": "No server output yet.",
+    "placeholderConnected": "Enter a server console command...",
     "placeholderReconnecting": "Reconnecting...",
-    "send": "Send"
+    "send": "Send",
+    "jumpToLatest": "Jump to latest",
+    "dockerNote": "Talks directly to the Docker container",
+    "dockerNoteTooltip": "Runs \"docker logs\"/\"docker exec\" over SSH - the SSH user needs permission to run docker on the target host (e.g. membership in the docker group)."
   },
   "ssh": {
     "connecting": "Connecting...",
