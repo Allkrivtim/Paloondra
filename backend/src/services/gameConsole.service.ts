@@ -172,11 +172,17 @@ class GameConsoleService extends EventEmitter {
 
     const cmd = `docker exec ${shellEscape(container)} mc-send-to-console -- ${shellEscape(command)}`;
     try {
-      const { stderr, code } = await sshService.exec(cmd);
+      const { stdout, stderr, code } = await sshService.exec(cmd);
       if (code !== 0) {
+        // Prefer stderr, but mc-send-to-console (and docker exec itself in
+        // some failure modes) can print its actual error to stdout instead
+        // - without this fallback, a script that isn't strict about the
+        // stdout/stderr convention would show a bare "exited with code 1"
+        // with no way to tell why.
+        const detail = stderr.trim() || stdout.trim() || `exited with code ${code}`;
         this.push({
           stream: 'system',
-          line: `Failed to send command: ${stderr.trim() || `exited with code ${code}`}`,
+          line: `Failed to send command: ${detail}`,
           timestamp: Date.now(),
         });
       }
