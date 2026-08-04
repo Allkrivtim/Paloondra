@@ -37,7 +37,8 @@
     "serverProperties": "Server Config",
     "whitelist": "Whitelist",
     "ops": "Ops",
-    "motd": "MOTD"
+    "motd": "MOTD",
+    "users": "Users"
   },
   "header": {
     "language": "Language",
@@ -661,6 +662,42 @@
     "failedToChangeLevel": "Failed to change operator level",
     "removeTitle": "Remove \"{{name}}\" as an operator?",
     "levelChangeRestartMessage": "Operator level changes require a full server restart to take effect. Adding/removing operators applies instantly."
+  },
+  "users": {
+    "title": "Users",
+    "addUsernamePlaceholder": "Username",
+    "addPasswordPlaceholder": "Password (min. 8 characters)",
+    "add": "Add user",
+    "role": {
+      "admin": "Admin",
+      "user": "User"
+    },
+    "columnUsername": "Username",
+    "columnRole": "Role",
+    "columnCreated": "Created",
+    "columnActions": "Actions",
+    "you": "(you)",
+    "resetPassword": "Reset password",
+    "resetPasswordTitle": "Reset password for \"{{name}}\"",
+    "resetPasswordPlaceholder": "New password (min. 8 characters)",
+    "resetPasswordConfirm": "Set password",
+    "remove": "Remove",
+    "removeTitle": "Remove the account \"{{name}}\"? They'll be signed out immediately.",
+    "lastAdminHint": "There must always be at least one admin.",
+    "cantRemoveSelfHint": "You can't remove your own account.",
+    "loading": "Loading users...",
+    "failedToLoad": "Failed to load users",
+    "retry": "Retry",
+    "noEntriesTitle": "No users yet",
+    "noEntriesHint": "Add one above.",
+    "addedToast": "Added user \"{{name}}\"",
+    "removedToast": "Removed user \"{{name}}\"",
+    "roleChangedToast": "Changed \"{{name}}\"'s role",
+    "passwordResetToast": "Reset password for \"{{name}}\"",
+    "failedToAdd": "Failed to add user",
+    "failedToRemove": "Failed to remove user",
+    "failedToChangeRole": "Failed to change role",
+    "failedToResetPassword": "Failed to reset password"
   },
   "motd": {
     "title": "MOTD (BetterMOTD)",

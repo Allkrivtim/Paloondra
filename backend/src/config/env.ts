@@ -52,10 +52,20 @@ export interface AppUserConfig {
   passwordHash: string;
 }
 
+// USERS is now only a one-time bootstrap seed for the first admin(s) - see
+// users.service.ts's seedIfEmpty(). It's intentionally NOT required: once
+// DATA_DIR/users.json exists (i.e. after the very first startup, or on any
+// install managed entirely through the Users tab), USERS is never read
+// again, so a deployment with no USERS set but a populated users.json is
+// completely normal and must not fail startup. An empty/unset USERS on a
+// deployment that also has no users.json yet just means there's no login
+// until one is bootstrapped (users.service.ts logs a loud warning for that
+// case instead of crashing, since a half-set-up-but-otherwise-fine backend
+// is still useful to have running while you finish setting it up).
 function parseUsers(raw: string): AppUserConfig[] {
   if (!raw) return [];
 
-  const users = raw
+  return raw
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean)
@@ -80,11 +90,6 @@ function parseUsers(raw: string): AppUserConfig[] {
       return { username, passwordHash };
     })
     .filter((u): u is AppUserConfig => u !== null);
-
-  if (users.length === 0) {
-    errors.push('USERS must contain at least one valid username:bcrypt_hash pair');
-  }
-  return users;
 }
 
 const sshPassword = process.env.SSH_PASSWORD || undefined;
@@ -102,7 +107,8 @@ export const env = {
 
   jwtSecret: required('JWT_SECRET'),
   jwtExpiresIn: optional('JWT_EXPIRES_IN', '12h'),
-  users: parseUsers(required('USERS')),
+  // Bootstrap seed only - see the comment on parseUsers() below.
+  users: parseUsers(optional('USERS', '')),
 
   // Scripts live on the target server (not the machine running this
   // backend) and run over the same SSH connection as the terminal/SFTP,

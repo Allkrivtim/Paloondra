@@ -293,3 +293,16 @@ export interface MotdDocument {
   values: MotdValues;
   reload?: MotdReloadOutcome;
 }
+
+// ---------------------------------------------------------------------------
+// Users (admin-managed panel accounts - not Minecraft players/ops)
+// ---------------------------------------------------------------------------
+
+export type UserRole = 'admin' | 'user';
+
+export interface AppUser {
+  id: string;
+  username: string;
+  role: UserRole;
+  createdAt: number;
+}

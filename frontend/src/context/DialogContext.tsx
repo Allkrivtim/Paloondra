@@ -15,6 +15,8 @@ interface PromptOptions {
   defaultValue?: string;
   confirmLabel?: string;
   placeholder?: string;
+  /** 'password' masks the input - for entering something that shouldn't be visible over someone's shoulder (e.g. resetting another user's password). Defaults to 'text'. */
+  type?: 'text' | 'password';
 }
 
 type PendingRequest =
@@ -82,6 +84,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 <input
                   ref={inputRef}
                   autoFocus
+                  type={pending.type ?? 'text'}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder={pending.placeholder}

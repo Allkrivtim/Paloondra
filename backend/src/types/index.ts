@@ -151,3 +151,21 @@ export interface OpEntry {
   level: number;
   bypassesPlayerLimit: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Users (admin-managed panel accounts - not Minecraft players/ops)
+// ---------------------------------------------------------------------------
+
+export type UserRole = 'admin' | 'user';
+
+/** Persisted shape, including the bcrypt hash - never sent to the frontend as-is, see PublicUser. */
+export interface StoredUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  role: UserRole;
+  createdAt: number;
+}
+
+/** What GET/POST/etc. on /api/users actually return - the hash is stripped. */
+export type PublicUser = Omit<StoredUser, 'passwordHash'>;

@@ -86,7 +86,9 @@ npm install
 cp .env.example .env
 # edit .env - see the variable reference below
 npm run hash -- "a-strong-password-for-your-first-user"
-# paste the printed hash into USERS in .env as admin:<hash>
+# paste the printed hash into USERS in .env as admin:<hash> - this only
+# bootstraps the first admin; every other user is managed from the Users
+# tab once you're logged in, see "Creating users" below
 npm run dev
 
 # Frontend (in a second terminal)
@@ -121,7 +123,7 @@ There is no separate config for the frontend beyond the API URL (see
 |---|---|---|
 | `JWT_SECRET` | `f3a1...` (48+ random bytes) | Signs login tokens. Generate with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`. Changing it invalidates all existing sessions. |
 | `JWT_EXPIRES_IN` | `12h` | How long a login stays valid. Any [`ms`](https://github.com/vercel/ms) string (`30m`, `7d`, ...) or a number of seconds. |
-| `USERS` | `admin:$2b$10$...,mod:$2b$10$...` | Comma separated `username:bcrypt_hash` pairs. See [Creating users](#creating-users) below — there is no signup UI. |
+| `USERS` | `admin:$2b$10$...,mod:$2b$10$...` | Optional, one-time bootstrap only. Comma separated `username:bcrypt_hash` pairs, each created as an admin the first time the backend starts with no users yet. Ignored once any user exists - manage accounts from the Users tab after that. See [Creating users](#creating-users) below. |
 
 ### RCON
 
@@ -250,8 +252,27 @@ problem it found and exits immediately — it will not start half-configured.
 
 ## Creating users
 
-There is no registration page or user-management UI by design — you edit
-`USERS` in `.env` by hand.
+Users are managed from the **Users** tab in the panel itself (visible only
+to admins) — add/remove accounts, change someone's role, or reset their
+password, all without touching `.env` or restarting the backend. Two
+roles exist:
+
+- **Admin** — everything a regular user can do, plus the Users tab itself.
+- **User** — the full rest of the panel (Dashboard, Console, every other
+  tab), just not user management.
+
+There's no more granular per-tab permission system than that today — it's
+admin-vs-not, matching how every tab already worked before this feature
+existed (full access once logged in).
+
+### Bootstrapping the first admin
+
+`USERS` in `.env` is a **one-time seed**, not an ongoing source of truth.
+On the very first startup — specifically, whenever `DATA_DIR/users.json`
+doesn't exist yet — the backend creates an admin account for every
+`username:bcrypt_hash` pair listed in `USERS`. From that point on,
+`users.json` is authoritative and `USERS` is never read again, even if you
+leave it set in `.env`.
 
 1. Pick a username and a strong password.
 2. From `backend/`, run:
@@ -263,10 +284,23 @@ There is no registration page or user-management UI by design — you edit
    ```
    USERS=admin:$2b$10$abc...,mod:$2b$10$xyz...
    ```
-4. Restart the backend. To remove a user, delete their entry and restart.
+4. Start the backend. Every user listed above is created as an **admin**
+   (preserving the full access they'd have had before this feature
+   existed). Log in and use the Users tab from here on.
 
-There's no "forgot password" flow either — to reset one, generate a new
-hash and replace their entry.
+If you don't set `USERS` and no one has ever logged in, the backend logs a
+loud startup warning (it still runs — nothing else depends on auth
+existing) explaining that nobody can log in until an admin is bootstrapped
+this way.
+
+### Locked out / lost your only admin
+
+If `DATA_DIR/users.json` is ever lost, corrupted, or you remove the last
+admin some other way: stop the backend, delete (or move aside)
+`DATA_DIR/users.json`, make sure `USERS` in `.env` has at least one valid
+entry, and restart — this re-runs the bootstrap above and creates a fresh
+admin. Existing non-`USERS` accounts in the deleted file are gone, so only
+do this as a genuine recovery step.
 
 ---
 
@@ -955,10 +989,12 @@ possible.
 - `backend/.env` is bind-mounted into the container (`/app/.env`) rather
   than loaded via Compose's `env_file:`. This is intentional: Compose's
   `env_file:` interpolates `$VAR`/`${VAR}` in the file, which would
-  silently corrupt bcrypt hashes in `USERS` (they contain literal `$`
-  characters) unless every `$` were doubled to `$$`. Mounting the file
-  instead lets the app's own dotenv loader read it exactly as written, so
-  hashes from `npm run hash` work unmodified — the same file, unchanged,
+  silently corrupt a bcrypt hash in `USERS` (they contain literal `$`
+  characters) unless every `$` were doubled to `$$` — still true even
+  though `USERS` is only read once, for the first-run bootstrap admin (see
+  [Creating users](#creating-users)). Mounting the file instead lets the
+  app's own dotenv loader read it exactly as written, so hashes from
+  `npm run hash` work unmodified — the same file, unchanged,
   works both with and without Docker.
 - The backend image is multi-stage: dependencies (including the native
   build toolchain `ssh2`'s optional `cpu-features` addon needs) are
@@ -1119,11 +1155,29 @@ fixes as the SSH terminal connection errors above (wrong `SSH_HOST`/
   always means this.
 
 **Login fails with "Invalid username or password" even though you're sure it's right**
-- Make sure you copied the *entire* bcrypt hash from `npm run hash` into
-  `USERS`, with no line breaks and no surrounding quotes.
-- Bcrypt hashes start with `$2a$`, `$2b$`, or `$2y$` — anything else means
-  the value in `USERS` isn't a real bcrypt hash, and the backend will have
-  already refused to start and told you so.
+- If you already have working accounts, have another admin reset your
+  password from the Users tab — there's no self-service "forgot password"
+  flow, but any admin can reset anyone's password (including their own)
+  from there.
+- If this is a fresh install and you're bootstrapping the first admin from
+  `USERS`: confirm `DATA_DIR/users.json` doesn't already exist with
+  different accounts in it (`USERS` is completely ignored once it does -
+  see [Creating users](#creating-users)), make sure you copied the
+  *entire* bcrypt hash from `npm run hash` into `USERS` with no line
+  breaks or surrounding quotes, and confirm it starts with `$2a$`, `$2b$`,
+  or `$2y$` — anything else means it isn't a real bcrypt hash and the
+  backend will have already refused to start and told you so.
+
+**Backend logs "No users exist yet and USERS is not set" and nobody can log in**
+Nothing is broken - the backend runs fine without any users, since every
+other tab/feature is independent of auth existing. Follow
+[Creating users](#creating-users) to bootstrap the first admin via `USERS`,
+then restart.
+
+**Users tab is missing / `/api/users` returns 403**
+Only admins see or can use it - a "User"-role account is working exactly
+as designed. Have an existing admin change your role from the Users tab
+(role changes apply immediately, no need to log out and back in).
 
 **Browser console shows CORS errors**
 `CORS_ORIGIN` in the backend's `.env` must exactly match the origin the
@@ -1204,6 +1258,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 | **Whitelist** | View/add/remove whitelisted players and toggle the whitelist on/off, all via RCON (instant, no restart), plus a manual "reload from disk" for out-of-band edits - see [Whitelist](#whitelist) |
 | **Ops** | View/add/remove operators via RCON (instant), plus a per-player permission level editor (edits `ops.json` directly, requires a restart) - see [Ops](#ops) |
 | **MOTD** | Form + raw-text editor for the BetterMOTD plugin's `config.yml` (profiles, presets, maintenance mode, player-count display), auto-reloaded live over RCON after every save - see [MOTD (BetterMOTD)](#motd-bettermotd) |
+| **Users** | Admin-only. Add/remove panel accounts, change someone's role, reset a password - see [Creating users](#creating-users) |
 
 ## Notes on the implementation
 
@@ -1217,7 +1272,12 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   set custom headers on a WS handshake). A 401 from any API call clears the
   stored token and bounces to the login screen, which also tears down any
   open WebSockets so they don't retry forever with a token that will never
-  become valid again.
+  become valid again. The token itself only carries a username, never a
+  role - every request/WS connection looks the user's current role (and
+  whether their account still exists at all) up fresh in `users.json`
+  (`backend/src/services/users.service.ts`), so a role change or account
+  removal takes effect on that person's very next action, not up to
+  `JWT_EXPIRES_IN` later.
 - **Reconnection**: RCON, the shared SSH connection (metrics, sudo-mode
   file ops, and the start/stop/restart/backup scripts), and the plain-SFTP
   connection each retry with exponential backoff (2s → 30s) if dropped, and
@@ -1288,6 +1348,14 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 
 - Change `JWT_SECRET` and every user's password before exposing this
   anywhere beyond localhost.
+- **Admin vs. User is the only access boundary.** Every non-admin tab is
+  identical for both roles (full Dashboard/Console/RCON/SFTP/plugin/file
+  access) - "User" only means "can't reach the Users tab", not a reduced
+  or sandboxed view of everything else. Only grant the admin role to
+  people you'd trust with every other tab anyway. Role changes and account
+  removals take effect on a person's very next request/WebSocket
+  connection, not after their token expires - see
+  [Creating users](#creating-users).
 - Put the backend behind HTTPS/WSS (reverse proxy) in production.
 - Only enable `SFTP_USE_SUDO` if you understand and accept what it grants —
   see [Enabling sudo mode](#enabling-sudo-mode-for-the-file-manager).
@@ -1297,9 +1365,10 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   uploads the result to `PLUGINS_DIR` as a `.jar` if it passes a basic
   zip-signature check. That's the feature working as designed, not a bug -
   same trust model as pasting a link into any other "download this for me"
-  tool. Only every user in `USERS` can reach it (it's behind the same auth
-  as everything else), so this is scoped by "who has a Paloondra login",
-  same as file deletes or running arbitrary RCON commands already are.
+  tool. Only someone with a Paloondra login can reach it (it's behind the
+  same auth as everything else), so this is scoped by "who has an account
+  in the system" (see [Creating users](#creating-users)), same as file
+  deletes or running arbitrary RCON commands already are.
 - The Modrinth-backed **install-from-store** endpoint is intentionally
   narrower: it only accepts file URLs on `cdn.modrinth.com`, so a request
   crafted to look like a store install can't be used to smuggle an

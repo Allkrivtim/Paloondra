@@ -37,7 +37,8 @@
     "serverProperties": "Настройки сервера",
     "whitelist": "Вайтлист",
     "ops": "Операторы",
-    "motd": "MOTD"
+    "motd": "MOTD",
+    "users": "Пользователи"
   },
   "header": {
     "language": "Язык",
@@ -663,6 +664,42 @@
     "failedToChangeLevel": "Не удалось изменить уровень оператора",
     "removeTitle": "Снять права оператора у «{{name}}»?",
     "levelChangeRestartMessage": "Изменение уровня оператора вступит в силу только после полного перезапуска сервера. Добавление/удаление операторов применяется мгновенно."
+  },
+  "users": {
+    "title": "Пользователи",
+    "addUsernamePlaceholder": "Имя пользователя",
+    "addPasswordPlaceholder": "Пароль (мин. 8 символов)",
+    "add": "Добавить пользователя",
+    "role": {
+      "admin": "Администратор",
+      "user": "Пользователь"
+    },
+    "columnUsername": "Имя пользователя",
+    "columnRole": "Роль",
+    "columnCreated": "Создан",
+    "columnActions": "Действия",
+    "you": "(вы)",
+    "resetPassword": "Сбросить пароль",
+    "resetPasswordTitle": "Сброс пароля для «{{name}}»",
+    "resetPasswordPlaceholder": "Новый пароль (мин. 8 символов)",
+    "resetPasswordConfirm": "Установить пароль",
+    "remove": "Удалить",
+    "removeTitle": "Удалить учётную запись «{{name}}»? Пользователь будет немедленно разлогинен.",
+    "lastAdminHint": "Должен остаться хотя бы один администратор.",
+    "cantRemoveSelfHint": "Нельзя удалить собственную учётную запись.",
+    "loading": "Загрузка пользователей...",
+    "failedToLoad": "Не удалось загрузить пользователей",
+    "retry": "Повторить",
+    "noEntriesTitle": "Пользователей пока нет",
+    "noEntriesHint": "Добавьте одного выше.",
+    "addedToast": "Пользователь «{{name}}» добавлен",
+    "removedToast": "Пользователь «{{name}}» удалён",
+    "roleChangedToast": "Роль «{{name}}» изменена",
+    "passwordResetToast": "Пароль для «{{name}}» сброшен",
+    "failedToAdd": "Не удалось добавить пользователя",
+    "failedToRemove": "Не удалось удалить пользователя",
+    "failedToChangeRole": "Не удалось изменить роль",
+    "failedToResetPassword": "Не удалось сбросить пароль"
   },
   "motd": {
     "title": "MOTD (BetterMOTD)",
