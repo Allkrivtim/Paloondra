@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { pluginsService } from '../services/plugins.service';
 import { auditLogService } from '../services/auditLog.service';
 import { env } from '../config/env';
@@ -9,6 +9,7 @@ import { sendError } from './routeUtils';
 const router = Router();
 
 router.use(requireAuth);
+router.use(requirePermission('plugins'));
 
 const upload = multer({
   storage: multer.memoryStorage(),

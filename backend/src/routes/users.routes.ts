@@ -3,7 +3,7 @@ import { AuthedRequest, requireAuth, requireAdmin } from '../auth/middleware';
 import { usersService } from '../services/users.service';
 import { auditLogService } from '../services/auditLog.service';
 import { sendError } from './routeUtils';
-import { UserRole } from '../types';
+import { isValidPermissionKey, PermissionKey, UserRole } from '../types';
 
 const router = Router();
 
@@ -15,6 +15,15 @@ router.use(requireAdmin);
 
 function isValidRole(value: unknown): value is UserRole {
   return value === 'admin' || value === 'user';
+}
+
+/** Returns undefined (meaning "use the default") for anything that isn't an array of valid keys, rather than partially trusting a malformed body. */
+function parsePermissions(value: unknown): PermissionKey[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  if (!value.every((v) => typeof v === 'string' && isValidPermissionKey(v))) {
+    throw new Error('permissions must be an array of valid permission keys');
+  }
+  return value as PermissionKey[];
 }
 
 router.get('/', async (_req, res) => {
@@ -36,7 +45,8 @@ router.post('/', async (req: AuthedRequest, res) => {
       res.status(400).json({ error: 'role must be "admin" or "user"' });
       return;
     }
-    const user = await usersService.create(username, password, role);
+    const permissions = parsePermissions(req.body?.permissions);
+    const user = await usersService.create(username, password, role, permissions);
     await auditLogService.record(req.user!.username, `Created user "${user.username}"`, role);
     res.json(user);
   } catch (err) {
@@ -56,6 +66,21 @@ router.put('/:id/role', async (req: AuthedRequest, res) => {
     res.json(user);
   } catch (err) {
     sendError(res, err, 'Failed to change role', 400);
+  }
+});
+
+router.put('/:id/permissions', async (req: AuthedRequest, res) => {
+  try {
+    const permissions = parsePermissions(req.body?.permissions);
+    if (!permissions) {
+      res.status(400).json({ error: 'permissions must be an array of valid permission keys' });
+      return;
+    }
+    const user = await usersService.setPermissions(req.params.id, permissions);
+    await auditLogService.record(req.user!.username, `Changed permissions for "${user.username}"`, permissions.join(', '));
+    res.json(user);
+  } catch (err) {
+    sendError(res, err, 'Failed to change permissions', 400);
   }
 });
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { schedulerService } from '../services/scheduler.service';
 import { auditLogService } from '../services/auditLog.service';
 import { sendError } from './routeUtils';
@@ -8,6 +8,7 @@ import { ScheduledTaskInput, ScheduledTaskType } from '../types';
 const router = Router();
 
 router.use(requireAuth);
+router.use(requirePermission('scheduler'));
 
 function parseInput(body: unknown): ScheduledTaskInput {
   const b = (body ?? {}) as Record<string, unknown>;

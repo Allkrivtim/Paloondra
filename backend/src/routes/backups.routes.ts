@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { fileManagerService } from '../services/fileManager.service';
 import { auditLogService } from '../services/auditLog.service';
 import { env } from '../config/env';
@@ -9,6 +9,7 @@ import { BackupInfo } from '../types';
 const router = Router();
 
 router.use(requireAuth);
+router.use(requirePermission('backups'));
 
 function requireDir(): string {
   if (!env.backups.dir) {

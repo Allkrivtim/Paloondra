@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { modrinthService, ModrinthError } from '../services/modrinth.service';
 import { pluginsService } from '../services/plugins.service';
 import { auditLogService } from '../services/auditLog.service';
@@ -8,6 +8,7 @@ import { sendError } from './routeUtils';
 const router = Router();
 
 router.use(requireAuth);
+router.use(requirePermission('plugins'));
 
 function handleModrinthError(res: Parameters<typeof sendError>[0], err: unknown, fallback: string): void {
   if (err instanceof ModrinthError) {

@@ -16,7 +16,7 @@ router.post('/login', async (req, res) => {
   }
 
   const token = issueToken(user.username);
-  res.json({ token, username: user.username, role: user.role });
+  res.json({ token, username: user.username, role: user.role, permissions: user.permissions });
 });
 
 // Stateless JWT - nothing to invalidate server side, endpoint exists for symmetry.
@@ -25,7 +25,7 @@ router.post('/logout', requireAuth, (_req, res) => {
 });
 
 router.get('/me', requireAuth, (req: AuthedRequest, res) => {
-  res.json({ username: req.user!.username, role: req.user!.role });
+  res.json({ username: req.user!.username, role: req.user!.role, permissions: req.user!.permissions });
 });
 
 export default router;

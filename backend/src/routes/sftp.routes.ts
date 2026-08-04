@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
-import { requireAuth } from '../auth/middleware';
+import { requireAuth, requirePermission } from '../auth/middleware';
 import { fileManagerService, resolveDefaultPath } from '../services/fileManager.service';
 import { env } from '../config/env';
 import { sendError } from './routeUtils';
@@ -10,6 +10,7 @@ const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
 router.use(requireAuth);
+router.use(requirePermission('sftp'));
 
 function normalizePath(p: unknown): string {
   const raw = typeof p === 'string' && p.trim() ? p : '/';

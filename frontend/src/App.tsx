@@ -47,77 +47,102 @@ export default function App() {
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="console" element={<Console />} />
+              <Route
+                path="console"
+                element={
+                  <ProtectedRoute permission="console">
+                    <Console />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="ssh"
                 element={
-                  <Suspense fallback={<TabFallback />}>
-                    <SshTerminal />
-                  </Suspense>
+                  <ProtectedRoute permission="ssh">
+                    <Suspense fallback={<TabFallback />}>
+                      <SshTerminal />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="sftp"
                 element={
-                  <Suspense fallback={<TabFallback />}>
-                    <SftpManager />
-                  </Suspense>
+                  <ProtectedRoute permission="sftp">
+                    <Suspense fallback={<TabFallback />}>
+                      <SftpManager />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="plugins"
                 element={
-                  <Suspense fallback={<TabFallback />}>
-                    <Plugins />
-                  </Suspense>
+                  <ProtectedRoute permission="plugins">
+                    <Suspense fallback={<TabFallback />}>
+                      <Plugins />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="backups"
                 element={
-                  <Suspense fallback={<TabFallback />}>
-                    <Backups />
-                  </Suspense>
+                  <ProtectedRoute permission="backups">
+                    <Suspense fallback={<TabFallback />}>
+                      <Backups />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="scheduler"
                 element={
-                  <Suspense fallback={<TabFallback />}>
-                    <ScheduledTasks />
-                  </Suspense>
+                  <ProtectedRoute permission="scheduler">
+                    <Suspense fallback={<TabFallback />}>
+                      <ScheduledTasks />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="server-properties"
                 element={
-                  <Suspense fallback={<TabFallback />}>
-                    <ServerProperties />
-                  </Suspense>
+                  <ProtectedRoute permission="serverConfig">
+                    <Suspense fallback={<TabFallback />}>
+                      <ServerProperties />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="whitelist"
                 element={
-                  <Suspense fallback={<TabFallback />}>
-                    <Whitelist />
-                  </Suspense>
+                  <ProtectedRoute permission="whitelist">
+                    <Suspense fallback={<TabFallback />}>
+                      <Whitelist />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="ops"
                 element={
-                  <Suspense fallback={<TabFallback />}>
-                    <Ops />
-                  </Suspense>
+                  <ProtectedRoute permission="ops">
+                    <Suspense fallback={<TabFallback />}>
+                      <Ops />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route
                 path="motd"
                 element={
-                  <Suspense fallback={<TabFallback />}>
-                    <Motd />
-                  </Suspense>
+                  <ProtectedRoute permission="motd">
+                    <Suspense fallback={<TabFallback />}>
+                      <Motd />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route

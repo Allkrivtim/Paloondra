@@ -83,7 +83,8 @@
     "chartRam": "RAM",
     "chartDisk": "Disk",
     "liveOutput": "Live Server Output",
-    "noOutputYet": "No output yet."
+    "noOutputYet": "No output yet.",
+    "noServerControlPermission": "You don't have permission to control the server"
   },
   "players": {
     "title": "Players Online",
@@ -95,14 +96,16 @@
     "confirmTitle": "{{action}} {{player}}?",
     "banExtraMessage": "This also removes them from the server.",
     "actionSentFallback": "{{action}} sent for {{player}}",
-    "failedToRunAction": "Failed to {{action}} {{player}}"
+    "failedToRunAction": "Failed to {{action}} {{player}}",
+    "noPermission": "You don't have permission to control the server"
   },
   "broadcast": {
     "title": "Broadcast",
     "placeholder": "Message to send to all players...",
     "send": "Send",
     "sent": "Broadcast sent",
-    "failedToSend": "Failed to send broadcast"
+    "failedToSend": "Failed to send broadcast",
+    "noPermission": "You don't have permission to control the server"
   },
   "auditLog": {
     "title": "Recent Activity",
@@ -697,7 +700,28 @@
     "failedToAdd": "Failed to add user",
     "failedToRemove": "Failed to remove user",
     "failedToChangeRole": "Failed to change role",
-    "failedToResetPassword": "Failed to reset password"
+    "failedToResetPassword": "Failed to reset password",
+    "permission": {
+      "console": "Console",
+      "ssh": "SSH Terminal",
+      "sftp": "File Manager",
+      "plugins": "Plugins & Mods",
+      "backups": "Backups",
+      "scheduler": "Scheduled Tasks",
+      "serverConfig": "Server Config",
+      "whitelist": "Whitelist",
+      "ops": "Ops",
+      "motd": "MOTD",
+      "serverControl": "Server control (start/stop/restart, kick/ban/op, broadcast)"
+    },
+    "permissionsLabel": "Permissions",
+    "columnPermissions": "Permissions",
+    "fullAccess": "Full access",
+    "permissionsCount": "{{count}}/{{total}}",
+    "savePermissions": "Save",
+    "cancel": "Cancel",
+    "permissionsChangedToast": "Updated permissions for \"{{name}}\"",
+    "failedToChangePermissions": "Failed to update permissions"
   },
   "motd": {
     "title": "MOTD (BetterMOTD)",

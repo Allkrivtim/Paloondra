@@ -253,17 +253,52 @@ problem it found and exits immediately — it will not start half-configured.
 ## Creating users
 
 Users are managed from the **Users** tab in the panel itself (visible only
-to admins) — add/remove accounts, change someone's role, or reset their
-password, all without touching `.env` or restarting the backend. Two
-roles exist:
+to admins) — add/remove accounts, change someone's role, edit their
+permissions, or reset their password, all without touching `.env` or
+restarting the backend. Two roles exist:
 
-- **Admin** — everything a regular user can do, plus the Users tab itself.
-- **User** — the full rest of the panel (Dashboard, Console, every other
-  tab), just not user management.
+- **Admin** — full access to everything, including the Users tab itself.
+  Permissions don't apply to admins; they always have full access.
+- **User** — access to Dashboard, plus whatever tabs/features their
+  permissions grant. Never the Users tab, regardless of permissions.
 
-There's no more granular per-tab permission system than that today — it's
-admin-vs-not, matching how every tab already worked before this feature
-existed (full access once logged in).
+### Per-feature permissions
+
+Beyond the admin/user role, each **User** account has its own set of
+granular permissions — one per tab, plus one for server control actions
+that live on the Dashboard itself rather than a tab of their own:
+
+| Permission | Gates |
+| --- | --- |
+| `console` | Console tab |
+| `ssh` | SSH Terminal tab |
+| `sftp` | File Manager tab |
+| `plugins` | Plugins & Mods tab |
+| `backups` | Backups tab |
+| `scheduler` | Scheduled Tasks tab |
+| `serverConfig` | Server Config tab |
+| `whitelist` | Whitelist tab |
+| `ops` | Ops tab |
+| `motd` | MOTD tab |
+| `serverControl` | Dashboard's Start/Stop/Restart buttons, plus its embedded player-management (kick/ban/op/whitelist-add) and broadcast actions |
+
+Dashboard's monitoring (server status, metrics charts, live output) and the
+audit log are always visible to every logged-in user — they're read-only,
+same as before this feature existed.
+
+New "User" accounts are created with **every permission checked by
+default** — restricting access is opt-in (uncheck specific boxes), so
+creating a user never accidentally locks them out of everything. Edit an
+existing user's permissions any time from the row's **Permissions** column
+in the Users tab. Permission changes, like role changes, take effect on
+the user's very next request or WebSocket connection — no need for them to
+log out and back in.
+
+Hiding a tab in the nav for a restricted user is UX only; the real
+enforcement is server-side (`requirePermission` on every gated REST route,
+and the same check on the `/ws/ssh` and `/ws/game-console` WebSocket
+upgrade handshake) — a restricted user hitting a gated API directly gets a
+403, not just a hidden button.
 
 ### Bootstrapping the first admin
 
@@ -1179,6 +1214,12 @@ Only admins see or can use it - a "User"-role account is working exactly
 as designed. Have an existing admin change your role from the Users tab
 (role changes apply immediately, no need to log out and back in).
 
+**A tab is missing, or its API returns 403 for a non-admin account**
+Expected if that account's permissions don't include the matching key -
+see [Per-feature permissions](#per-feature-permissions). Have an admin
+check the relevant box in that user's Permissions column in the Users
+tab; permission changes, like role changes, apply immediately.
+
 **Browser console shows CORS errors**
 `CORS_ORIGIN` in the backend's `.env` must exactly match the origin the
 frontend is served from (scheme, host, and port). `http://localhost:5173`
@@ -1273,11 +1314,11 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   stored token and bounces to the login screen, which also tears down any
   open WebSockets so they don't retry forever with a token that will never
   become valid again. The token itself only carries a username, never a
-  role - every request/WS connection looks the user's current role (and
-  whether their account still exists at all) up fresh in `users.json`
-  (`backend/src/services/users.service.ts`), so a role change or account
-  removal takes effect on that person's very next action, not up to
-  `JWT_EXPIRES_IN` later.
+  role or permissions - every request/WS connection looks the user's
+  current role and permissions (and whether their account still exists at
+  all) up fresh in `users.json` (`backend/src/services/users.service.ts`),
+  so a role change, permission change, or account removal takes effect on
+  that person's very next action, not up to `JWT_EXPIRES_IN` later.
 - **Reconnection**: RCON, the shared SSH connection (metrics, sudo-mode
   file ops, and the start/stop/restart/backup scripts), and the plain-SFTP
   connection each retry with exponential backoff (2s → 30s) if dropped, and
@@ -1348,13 +1389,16 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 
 - Change `JWT_SECRET` and every user's password before exposing this
   anywhere beyond localhost.
-- **Admin vs. User is the only access boundary.** Every non-admin tab is
-  identical for both roles (full Dashboard/Console/RCON/SFTP/plugin/file
-  access) - "User" only means "can't reach the Users tab", not a reduced
-  or sandboxed view of everything else. Only grant the admin role to
-  people you'd trust with every other tab anyway. Role changes and account
-  removals take effect on a person's very next request/WebSocket
-  connection, not after their token expires - see
+- **Admin is unrestricted; User is gated by per-feature permissions.**
+  Admins always have full access, including the Users tab itself - only
+  grant the admin role to people you'd trust with every tab and every
+  action. Non-admin accounts are limited to whatever their permissions
+  grant (see [Per-feature permissions](#per-feature-permissions)); a
+  "User" with every permission checked has the same practical access
+  regular users had before this feature existed, but nothing forces that -
+  restrict freely. Role changes, permission changes, and account removals
+  all take effect on a person's very next request/WebSocket connection,
+  not after their token expires - see
   [Creating users](#creating-users).
 - Put the backend behind HTTPS/WSS (reverse proxy) in production.
 - Only enable `SFTP_USE_SUDO` if you understand and accept what it grants —

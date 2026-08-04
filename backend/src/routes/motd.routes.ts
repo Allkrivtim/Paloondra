@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import YAML from 'yaml';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { fileManagerService } from '../services/fileManager.service';
 import { auditLogService } from '../services/auditLog.service';
 import { env } from '../config/env';
@@ -10,6 +10,7 @@ import { motdConfigPath, extractMotdValues, applyMotdUpdate, reloadBetterMotd } 
 const router = Router();
 
 router.use(requireAuth);
+router.use(requirePermission('motd'));
 
 router.get('/', async (_req, res) => {
   const filePath = motdConfigPath();

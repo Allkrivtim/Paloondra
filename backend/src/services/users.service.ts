@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { readJsonFile, writeJsonFile } from './jsonStore';
 import { env } from '../config/env';
-import { PublicUser, StoredUser, UserRole } from '../types';
+import { ALL_PERMISSIONS, PermissionKey, PublicUser, StoredUser, UserRole } from '../types';
 
 const FILE = 'users.json';
 // Matches scripts/hashPassword.ts, so a hand-generated USERS hash and one
@@ -32,8 +32,20 @@ class UsersService {
 
   private ensureLoaded(): Promise<void> {
     if (!this.loaded) {
-      this.loaded = readJsonFile<StoredUser[]>(FILE, []).then((users) => {
-        this.users = users;
+      this.loaded = readJsonFile<StoredUser[]>(FILE, []).then(async (users) => {
+        // Migrate-on-load: records written before granular permissions
+        // existed have no `permissions` field. Backfill to full access (what
+        // every non-admin user had, implicitly, until now) and persist the
+        // backfill so it only ever has to happen once per record.
+        let migrated = false;
+        this.users = users.map((u) => {
+          if (!Array.isArray((u as Partial<StoredUser>).permissions)) {
+            migrated = true;
+            return { ...u, permissions: [...ALL_PERMISSIONS] };
+          }
+          return u;
+        });
+        if (migrated) await this.persist();
       });
     }
     return this.loaded;
@@ -67,6 +79,7 @@ class UsersService {
       username: u.username,
       passwordHash: u.passwordHash,
       role: 'admin' as UserRole,
+      permissions: [...ALL_PERMISSIONS],
       createdAt: Date.now(),
     }));
     await this.persist();
@@ -96,7 +109,14 @@ class UsersService {
     }
   }
 
-  async create(username: string, password: string, role: UserRole): Promise<PublicUser> {
+  /**
+   * `permissions` is ignored for role: 'admin' (always gets ALL_PERMISSIONS,
+   * even though the check is bypassed for admins - see StoredUser). For
+   * role: 'user', defaults to ALL_PERMISSIONS when omitted, matching what
+   * "user" meant before granular permissions existed - restriction is
+   * opt-in, not the default.
+   */
+  async create(username: string, password: string, role: UserRole, permissions?: PermissionKey[]): Promise<PublicUser> {
     await this.ensureLoaded();
     const name = username.trim();
     if (!name) throw new Error('Username is required');
@@ -110,6 +130,7 @@ class UsersService {
       username: name,
       passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS),
       role,
+      permissions: role === 'admin' ? [...ALL_PERMISSIONS] : (permissions ?? [...ALL_PERMISSIONS]),
       createdAt: Date.now(),
     };
     this.users.push(user);
@@ -140,6 +161,25 @@ class UsersService {
       throw new Error('Cannot demote the last remaining admin');
     }
     target.role = role;
+    // Promotion to admin always gets full access, overwriting whatever
+    // restricted set they had as a 'user' - see StoredUser's `permissions`
+    // doc comment for why admins always carry ALL_PERMISSIONS at rest.
+    if (role === 'admin') {
+      target.permissions = [...ALL_PERMISSIONS];
+    }
+    await this.persist();
+    return toPublic(target);
+  }
+
+  /** Only valid for role: 'user' accounts - permissions are inert/bypassed for admins, so editing them there would be misleading. */
+  async setPermissions(id: string, permissions: PermissionKey[]): Promise<PublicUser> {
+    await this.ensureLoaded();
+    const target = this.users.find((u) => u.id === id);
+    if (!target) throw new Error('User not found');
+    if (target.role === 'admin') {
+      throw new Error('Permissions only apply to non-admin accounts');
+    }
+    target.permissions = [...permissions];
     await this.persist();
     return toPublic(target);
   }

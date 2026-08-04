@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import path from 'path';
 import YAML from 'yaml';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { fileManagerService } from '../services/fileManager.service';
 import { auditLogService } from '../services/auditLog.service';
 import { env } from '../config/env';
@@ -12,6 +12,7 @@ import { ServerFileKey } from '../types';
 const router = Router();
 
 router.use(requireAuth);
+router.use(requirePermission('serverConfig'));
 
 const FILENAMES: Record<ServerFileKey, string> = {
   bukkit: 'bukkit.yml',

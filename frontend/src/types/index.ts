@@ -300,9 +300,33 @@ export interface MotdDocument {
 
 export type UserRole = 'admin' | 'user';
 
+/**
+ * Mirrors backend/src/types/index.ts's PERMISSION_KEYS exactly - keep in
+ * sync by hand. Each key roughly maps to one nav tab, except
+ * `serverControl`, which gates the Dashboard's start/stop/restart buttons
+ * and its embedded RCON quick actions (kick/ban/op/whitelist-add/
+ * broadcast) instead of a tab of its own.
+ */
+export const PERMISSION_KEYS = [
+  'console',
+  'ssh',
+  'sftp',
+  'plugins',
+  'backups',
+  'scheduler',
+  'serverConfig',
+  'whitelist',
+  'ops',
+  'motd',
+  'serverControl',
+] as const;
+
+export type PermissionKey = (typeof PERMISSION_KEYS)[number];
+
 export interface AppUser {
   id: string;
   username: string;
   role: UserRole;
+  permissions: PermissionKey[];
   createdAt: number;
 }

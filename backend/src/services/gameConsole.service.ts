@@ -180,6 +180,11 @@ class GameConsoleService extends EventEmitter {
         // stdout/stderr convention would show a bare "exited with code 1"
         // with no way to tell why.
         const detail = stderr.trim() || stdout.trim() || `exited with code ${code}`;
+        // Also log server-side: the push() above only reaches clients who
+        // happen to be watching the Console tab at this exact moment, so
+        // without this, `docker compose logs` would never show these
+        // failures at all.
+        console.error(`[gameConsole] Failed to send command: ${detail}`);
         this.push({
           stream: 'system',
           line: `Failed to send command: ${detail}`,
@@ -187,9 +192,11 @@ class GameConsoleService extends EventEmitter {
         });
       }
     } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error(`[gameConsole] Failed to send command: ${detail}`);
       this.push({
         stream: 'system',
-        line: `Failed to send command: ${err instanceof Error ? err.message : String(err)}`,
+        line: `Failed to send command: ${detail}`,
         timestamp: Date.now(),
       });
     }

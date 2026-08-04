@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { whitelistService } from '../services/whitelist.service';
 import { auditLogService } from '../services/auditLog.service';
 import { sendError, isValidMinecraftUsername } from './routeUtils';
@@ -7,6 +7,7 @@ import { sendError, isValidMinecraftUsername } from './routeUtils';
 const router = Router();
 
 router.use(requireAuth);
+router.use(requirePermission('whitelist'));
 
 function requireUsername(body: unknown): string {
   const name = (body as { name?: unknown } | null)?.name;
