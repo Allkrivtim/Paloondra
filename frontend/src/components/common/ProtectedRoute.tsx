@@ -3,9 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import Spinner from './Spinner';
 
-export default function ProtectedRoute({ children }: { children: JSX.Element }) {
+interface Props {
+  children: JSX.Element;
+  /** Redirects to the Dashboard instead of rendering, for routes only admins should reach (e.g. Users). The backend enforces this independently - this is just UX, not the real gate. */
+  adminOnly?: boolean;
+}
+
+export default function ProtectedRoute({ children, adminOnly }: Props) {
   const { t } = useTranslation();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
 
   if (loading) {
     return (
@@ -16,6 +22,9 @@ export default function ProtectedRoute({ children }: { children: JSX.Element }) 
   }
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
   }
   return children;
 }

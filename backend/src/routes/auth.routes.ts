@@ -10,13 +10,13 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'username and password are required' });
   }
 
-  const valid = await verifyCredentials(username, password);
-  if (!valid) {
+  const user = await verifyCredentials(username, password);
+  if (!user) {
     return res.status(401).json({ error: 'Invalid username or password' });
   }
 
-  const token = issueToken(username);
-  res.json({ token, username });
+  const token = issueToken(user.username);
+  res.json({ token, username: user.username, role: user.role });
 });
 
 // Stateless JWT - nothing to invalidate server side, endpoint exists for symmetry.
@@ -25,7 +25,7 @@ router.post('/logout', requireAuth, (_req, res) => {
 });
 
 router.get('/me', requireAuth, (req: AuthedRequest, res) => {
-  res.json({ username: req.user!.username });
+  res.json({ username: req.user!.username, role: req.user!.role });
 });
 
 export default router;

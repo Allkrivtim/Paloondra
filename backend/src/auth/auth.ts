@@ -1,20 +1,15 @@
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { usersService } from '../services/users.service';
+import { StoredUser } from '../types';
 
 export interface TokenPayload {
   username: string;
 }
 
-export async function verifyCredentials(username: string, password: string): Promise<boolean> {
-  const user = env.users.find((u) => u.username === username);
-  if (!user) {
-    // Still run a bcrypt compare against a dummy hash to avoid leaking
-    // via response-time whether a username exists.
-    await bcrypt.compare(password, '$2b$10$0000000000000000000000000000000000000000000000');
-    return false;
-  }
-  return bcrypt.compare(password, user.passwordHash);
+/** Resolves to the matched user (role included) on success, null on a bad username/password. */
+export async function verifyCredentials(username: string, password: string): Promise<StoredUser | null> {
+  return usersService.verifyCredentials(username, password);
 }
 
 export function issueToken(username: string): string {

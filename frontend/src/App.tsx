@@ -21,6 +21,7 @@ const ServerProperties = lazy(() => import('./components/tabs/ServerProperties')
 const Whitelist = lazy(() => import('./components/tabs/Whitelist'));
 const Ops = lazy(() => import('./components/tabs/Ops'));
 const Motd = lazy(() => import('./components/tabs/Motd'));
+const Users = lazy(() => import('./components/tabs/Users'));
 
 function TabFallback() {
   return (
@@ -117,6 +118,16 @@ export default function App() {
                   <Suspense fallback={<TabFallback />}>
                     <Motd />
                   </Suspense>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <Suspense fallback={<TabFallback />}>
+                      <Users />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
             </Route>

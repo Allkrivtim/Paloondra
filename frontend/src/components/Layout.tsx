@@ -5,7 +5,7 @@ import LanguageSwitcher from './common/LanguageSwitcher';
 
 export default function Layout() {
   const { t } = useTranslation();
-  const { username, logout } = useAuth();
+  const { username, isAdmin, logout } = useAuth();
 
   const TABS = [
     { to: '/', label: t('nav.dashboard'), end: true },
@@ -19,6 +19,10 @@ export default function Layout() {
     { to: '/whitelist', label: t('nav.whitelist') },
     { to: '/ops', label: t('nav.ops') },
     { to: '/motd', label: t('nav.motd') },
+    // Only admins can manage other accounts - hidden here for everyone
+    // else, but the real enforcement is server-side (requireAdmin on
+    // every /api/users route), not this UI-level hiding.
+    ...(isAdmin ? [{ to: '/users', label: t('nav.users') }] : []),
   ];
 
   return (
