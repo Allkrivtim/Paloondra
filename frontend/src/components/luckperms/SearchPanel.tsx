@@ -4,6 +4,7 @@ import { searchUsers, searchGroups } from '../../api/luckperms';
 import { getErrorMessage } from '../../api/errors';
 import { LuckPermsGroupSearchResult, LuckPermsSearchNodeType, LuckPermsUserSearchResult } from '../../types';
 import { describeNode } from './nodeFormat';
+import { recordNodes } from './knownKeys';
 import { ContextChips } from './ContextEditor';
 import Spinner from '../common/Spinner';
 
@@ -41,6 +42,8 @@ export default function SearchPanel({ onSelectUser, onSelectGroup }: Props) {
       const [users, groups] = await Promise.all([searchUsers(params), searchGroups(params)]);
       setUserResults(users);
       setGroupResults(groups);
+      recordNodes(users.flatMap((r) => r.results));
+      recordNodes(groups.flatMap((r) => r.results));
       setHasSearched(true);
     } catch (err) {
       setError(getErrorMessage(err, t('luckperms.searchFailed')));

@@ -117,6 +117,11 @@ class LuckPermsService {
 
   // --- Users ---------------------------------------------------------------
 
+  /** Every user LuckPerms has a record for - bare UUIDs only, no usernames (that's the REST API's own response shape). The frontend resolves usernames page-by-page via getUser() rather than all at once - see UsersBrowserPanel.tsx. */
+  async listUsers(): Promise<string[]> {
+    return lpFetch('/user');
+  }
+
   /** Resolves a username/UUID to the account LuckPerms already knows (i.e. has joined before, or been referenced via /lp). Returns null rather than throwing on a genuine "not found", since that's an expected outcome for a search box, not an exceptional failure. */
   async lookupUser(params: { username?: string; uniqueId?: string }): Promise<{ uniqueId: string; username: string } | null> {
     try {

@@ -852,12 +852,13 @@ a new one, rather than an in-place edit.
 
 - **Groups and tracks** are listed eagerly in the sidebar (`GET /group`,
   `GET /track` - both return name lists, cheap regardless of server size).
-- **Users are search-first, not listed.** The REST API's "list all users"
-  endpoint only returns bare UUIDs with no usernames, which isn't useful to
-  browse - so instead, search by username (`GET /user/lookup`), which
-  finds anyone LuckPerms already knows about (i.e. has joined before, or
-  been referenced via `/lp`). Recently-viewed users stay in the sidebar for
-  the rest of the session.
+- **Users**: search by username (`GET /user/lookup`) for a quick jump to
+  someone specific, or use **Browse all** to page through every user
+  LuckPerms has a record for - see
+  [Browsing all users](#browsing-all-users). Either way, "known to
+  LuckPerms" means has joined before, or been referenced via `/lp`.
+  Recently-searched users also stay in the sidebar for the rest of the
+  session.
 - **Promote/Demote** a user along a track is available from their panel -
   this is the same operation `/lp user <name> promote <track>` performs,
   just from the UI.
@@ -879,16 +880,40 @@ display name - permission nodes are always included unless a type filter
 is set, since "permission" isn't a separate type to filter by). Click any
 result to jump straight to that user's or group's full panel.
 
+### Browsing all users
+
+The sidebar's **Browse all** link (next to the username search box) lists
+every user LuckPerms has a record for, paginated. `GET /user` on the REST
+API only returns bare UUIDs with no usernames and no pagination of its
+own, so this fetches that full id list once (for the count and page math)
+and only resolves usernames - one `GET /user/:id` per row - for whichever
+page is actually being looked at, rather than resolving potentially
+hundreds of accounts up front. Click any row to open that user's full
+panel, same as a search result.
+
+### Permission/meta key suggestions
+
+The **Add permission** and **Meta** forms suggest keys as you type. This
+is *not* the same thing as the official web editor's autocomplete, which
+draws on LuckPerms' own live in-memory permission registry (populated
+from every installed plugin's registered permissions) - the REST API
+doesn't expose that registry, so there's no way to offer the real thing
+here. Instead, suggestions come from every key this session has actually
+observed: proactively seeded from all your groups the moment the tab
+opens (groups are where most permissions get defined), and growing as you
+browse more groups/users/search results. It resets on page reload and
+will never be as complete as the real registry, but it's genuinely useful
+after the first few groups load - not a fake or hardcoded list.
+
 ### What's different from the official web editor
 
 - **Changes apply immediately**, not via LuckPerms' paste-and-apply-code
   flow - every add/remove is a live REST API call the moment you make it,
   matching how the rest of this panel's tabs (Whitelist, Ops, ...) work.
   There's no separate "apply" step and nothing to copy-paste.
-- **No permission-key autocomplete.** The official editor suggests
-  permission nodes from LuckPerms' own in-memory registry as you type;
-  the REST API doesn't expose that registry, so permission keys are
-  freeform text here.
+- **Permission-key suggestions are session-observed, not a live registry**
+  - see [Permission/meta key suggestions](#permissionmeta-key-suggestions)
+  above for why.
 - **Track reordering uses up/down buttons**, not drag-and-drop.
 - Every change is also recorded in Paloondra's own [audit log](#audit-log)
   (who changed what, when) - the official editor has no equivalent.

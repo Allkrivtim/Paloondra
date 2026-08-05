@@ -82,6 +82,14 @@ router.get('/health', async (_req, res) => {
 
 // --- Users -------------------------------------------------------------
 
+router.get('/users', async (_req, res) => {
+  try {
+    res.json({ users: await luckPermsService.listUsers() });
+  } catch (err) {
+    handleError(res, err, 'Failed to list users');
+  }
+});
+
 // Must come before /users/:uniqueId - Express matches routes in
 // registration order, and :uniqueId would otherwise swallow "search" as
 // if it were an id.

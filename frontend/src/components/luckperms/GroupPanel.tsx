@@ -5,6 +5,7 @@ import { getErrorMessage } from '../../api/errors';
 import { useToast } from '../../context/ToastContext';
 import { useDialog } from '../../context/DialogContext';
 import { LuckPermsGroup, LuckPermsNewNode, LuckPermsNode } from '../../types';
+import { recordNodes } from './knownKeys';
 import PermissionsPanel from './PermissionsPanel';
 import ParentsPanel from './ParentsPanel';
 import ChatMetaPanel from './ChatMetaPanel';
@@ -46,6 +47,10 @@ export default function GroupPanel({ name, allGroupNames, onDeleted }: Props) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (group) recordNodes(group.nodes);
+  }, [group]);
 
   async function handleAdd(node: LuckPermsNewNode) {
     setGroup(await addGroupNode(name, node));

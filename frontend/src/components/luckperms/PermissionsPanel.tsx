@@ -4,6 +4,7 @@ import { LuckPermsContext, LuckPermsNewNode, LuckPermsNode } from '../../types';
 import { getErrorMessage } from '../../api/errors';
 import { useToast } from '../../context/ToastContext';
 import { isPermissionNode, datetimeLocalToExpiry } from './nodeFormat';
+import { getKnownPermissionKeys } from './knownKeys';
 import { ContextInput } from './ContextEditor';
 import NodeRow from './NodeRow';
 import Spinner from '../common/Spinner';
@@ -63,8 +64,15 @@ export default function PermissionsPanel({ nodes, onAdd, onRemove }: Props) {
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder={t('luckperms.permissionKeyPlaceholder')}
+            list="lp-known-permission-keys"
             className="min-w-[16rem] flex-1 rounded-lg border border-panel-border bg-panel-surface2 px-3 py-1.5 font-mono text-sm text-panel-text outline-none focus:border-panel-accent"
           />
+          {/* Suggestions from whatever this session has actually seen so far, not LuckPerms' own registry - see knownKeys.ts. */}
+          <datalist id="lp-known-permission-keys">
+            {getKnownPermissionKeys().map((k) => (
+              <option key={k} value={k} />
+            ))}
+          </datalist>
           <label className="flex items-center gap-1.5 text-sm text-panel-text">
             <input type="checkbox" checked={value} onChange={(e) => setValue(e.target.checked)} className="h-4 w-4 accent-panel-accent2" />
             {t('luckperms.valueTrue')}

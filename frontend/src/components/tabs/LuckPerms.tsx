@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getHealth, listGroups, listTracks, createGroup, createTrack } from '../../api/luckperms';
+import { getHealth, listGroups, listTracks, createGroup, createTrack, getGroup } from '../../api/luckperms';
 import { getErrorMessage } from '../../api/errors';
 import { useToast } from '../../context/ToastContext';
 import EntitySidebar, { Selection } from '../luckperms/EntitySidebar';
@@ -8,6 +8,8 @@ import GroupPanel from '../luckperms/GroupPanel';
 import TrackPanel from '../luckperms/TrackPanel';
 import UserPanel from '../luckperms/UserPanel';
 import SearchPanel from '../luckperms/SearchPanel';
+import UsersBrowserPanel from '../luckperms/UsersBrowserPanel';
+import { recordNodes } from '../luckperms/knownKeys';
 import Spinner from '../common/Spinner';
 
 type HealthState = { configured: boolean; ok: boolean } | null;
@@ -22,6 +24,7 @@ export default function LuckPerms() {
   const [listsLoading, setListsLoading] = useState(false);
   const [listsError, setListsError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Selection | null>(null);
+  const seededKnownKeys = useRef(false);
 
   const checkHealth = useCallback(async () => {
     setCheckingHealth(true);
@@ -55,6 +58,22 @@ export default function LuckPerms() {
   useEffect(() => {
     if (health?.configured && health.ok) refreshLists();
   }, [health, refreshLists]);
+
+  // Seeds the Permissions/Meta add-forms' autocomplete (see knownKeys.ts)
+  // from every group's own node list the moment the tab opens, so there's
+  // something useful to suggest even before browsing anything - groups are
+  // where most permissions actually get defined. Fire-and-forget, once per
+  // session; a group that errors just doesn't contribute, doesn't block
+  // the rest.
+  useEffect(() => {
+    if (seededKnownKeys.current || groupNames.length === 0) return;
+    seededKnownKeys.current = true;
+    Promise.allSettled(groupNames.map((name) => getGroup(name))).then((results) => {
+      for (const result of results) {
+        if (result.status === 'fulfilled') recordNodes(result.value.nodes);
+      }
+    });
+  }, [groupNames]);
 
   async function handleCreateGroup(name: string) {
     if (!name) return;
@@ -160,6 +179,9 @@ export default function LuckPerms() {
             onSelectUser={(uniqueId) => setSelected({ kind: 'user', uniqueId })}
             onSelectGroup={(name) => setSelected({ kind: 'group', name })}
           />
+        )}
+        {selected?.kind === 'browse-users' && (
+          <UsersBrowserPanel onSelectUser={(uniqueId, username) => setSelected({ kind: 'user', uniqueId, username })} />
         )}
         {selected?.kind === 'group' && <GroupPanel key={selected.name} name={selected.name} allGroupNames={groupNames} onDeleted={handleGroupDeleted} />}
         {selected?.kind === 'track' && <TrackPanel key={selected.name} name={selected.name} allGroupNames={groupNames} onDeleted={handleTrackDeleted} />}
