@@ -174,7 +174,12 @@ class GameConsoleService extends EventEmitter {
     // container (see env.docker.consoleExecUser) - mc-send-to-console
     // rejects being run as any other user, and `docker exec` defaults to
     // root without this flag.
-    const cmd = `docker exec -u ${shellEscape(env.docker.consoleExecUser)} ${shellEscape(container)} mc-send-to-console -- ${shellEscape(command)}`;
+    //
+    // No `--` separator here: mc-send-to-console doesn't understand one -
+    // it just joins its argv with spaces ("$*") and writes that straight
+    // into the console pipe, so a literal `--` would show up as part of
+    // the command text itself (e.g. "-- say hi" instead of "say hi").
+    const cmd = `docker exec -u ${shellEscape(env.docker.consoleExecUser)} ${shellEscape(container)} mc-send-to-console ${shellEscape(command)}`;
     try {
       const { stdout, stderr, code } = await sshService.exec(cmd);
       if (code !== 0) {
