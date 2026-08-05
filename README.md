@@ -38,13 +38,14 @@ the short version, skip to [Quick start](#quick-start).
 12. [Whitelist](#whitelist)
 13. [Ops](#ops)
 14. [MOTD (BetterMOTD)](#motd-bettermotd)
-15. [Audit log](#audit-log)
-16. [Localization](#localization)
-17. [Running in production](#running-in-production)
-18. [Running with systemd](#running-with-systemd)
-19. [Docker](#docker)
-20. [Development mode](#development-mode)
-21. [Troubleshooting](#troubleshooting)
+15. [LuckPerms](#luckperms)
+16. [Audit log](#audit-log)
+17. [Localization](#localization)
+18. [Running in production](#running-in-production)
+19. [Running with systemd](#running-with-systemd)
+20. [Docker](#docker)
+21. [Development mode](#development-mode)
+22. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -236,6 +237,13 @@ backend refusing to start.
 |---|---|---|
 | `MODRINTH_API_URL` | `https://api.modrinth.com/v2` | Base URL of the Modrinth API. No reason to change this unless you're pointing at a mirror/proxy. See [Plugins & the plugin store](#plugins--the-plugin-store) for how it's used. |
 
+### LuckPerms
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `LUCKPERMS_API_URL` | `http://127.0.0.1:8080` | Base URL of the **LuckPerms REST API extension** (not part of LuckPerms itself - see [LuckPerms](#luckperms) below for what has to be deployed first). Optional, like `MC_CONTAINER`/`PLUGINS_DIR` - unset means the tab shows a "not configured" message. Reached as a plain HTTP call, **not** over the shared SSH connection - same reachability assumption as `RCON_HOST`/`PORT`. |
+| `LUCKPERMS_API_KEY` | `myverysecureapikey` | Only needed if the extension's own auth (`LUCKPERMS_REST_AUTH`) is enabled - sent as `Authorization: Bearer <key>`. Leaving both unset means anyone who can reach the port controls every player's permissions - see [Security](#security). |
+
 ### Local data storage
 
 Unlike every other path in this file, this one is **not** on the target
@@ -281,6 +289,7 @@ that live on the Dashboard itself rather than a tab of their own:
 | `whitelist` | Whitelist tab |
 | `ops` | Ops tab |
 | `motd` | MOTD tab |
+| `luckperms` | LuckPerms tab - see [LuckPerms](#luckperms). Grants full control over every player's in-game permissions; consider carefully before granting it to a non-admin. |
 | `serverControl` | Dashboard's Start/Stop/Restart buttons, plus its embedded player-management (kick/ban/op/whitelist-add) and broadcast actions |
 
 Dashboard's monitoring (server status, metrics charts, live output) and the
@@ -791,6 +800,88 @@ fallback.
 
 ---
 
+## LuckPerms
+
+A [LuckPerms](https://luckperms.net/) permissions editor built around the
+same node/group/track model as LuckPerms' own official web editor - browse
+groups and tracks, search for a player, and edit permissions, parent
+groups, prefixes/suffixes, and custom meta, all live against your running
+server.
+
+**This is NOT part of LuckPerms itself.** LuckPerms' familiar `/lp editor`
+command uses a one-shot paste-exchange flow (bytebin), not a live API -
+there's nothing for Paloondra to talk to there. This tab instead talks to
+the separate, official **[LuckPerms REST API extension](https://github.com/LuckPerms/rest-api)**,
+which you have to deploy yourself before this tab will do anything:
+
+1. Deploy the extension (Docker is easiest - see its own README for
+   `docker-compose.yml`), pointed at the same database/storage your
+   LuckPerms instance uses. Note its port (`8080` by default).
+2. If you want it authenticated (strongly recommended - see
+   [Security](#security)), set `LUCKPERMS_REST_AUTH=true` and
+   `LUCKPERMS_REST_AUTH_KEYS=<a-long-random-key>` on the extension, and put
+   the same key in `LUCKPERMS_API_KEY` below.
+3. Set `LUCKPERMS_API_URL` in `backend/.env` to wherever it's listening
+   (e.g. `http://127.0.0.1:8080`) and restart the backend. Unset (the
+   default) means the tab shows a clear "not configured" message instead
+   of failing startup - see [Every `.env` variable, explained](#every-env-variable-explained).
+
+### The node model
+
+LuckPerms represents everything - permissions, group inheritance,
+prefixes/suffixes, custom meta, weight, display name - as one unified
+"node" system, where a node's *kind* is encoded in its key string (e.g.
+`group.admin` for inheriting the `admin` group, `prefix.100.&aVIP ` for a
+priority-100 prefix). Paloondra's editor hides that string format behind
+four tabs, mirroring the official web editor:
+
+| Tab | Shows/edits |
+|---|---|
+| **Permissions** | Raw permission nodes (`minecraft.command.ban`, plugin permissions, etc.), each with a true/false value, optional context, optional expiry |
+| **Parents** | Which group(s) this group/user inherits from |
+| **Chat Meta** | Prefix/suffix entries, each with a priority (higher wins) |
+| **Meta** | Arbitrary custom key/value pairs (e.g. a `rank` or `title` meta key some plugins read) |
+
+Groups additionally have a **Weight** and **Display Name** (their own
+single-value fields, not a list). A node's context and expiry are set once
+when it's added - LuckPerms treats a different context as a genuinely
+different node, so changing either means removing the old node and adding
+a new one, rather than an in-place edit.
+
+### Users, groups, and tracks
+
+- **Groups and tracks** are listed eagerly in the sidebar (`GET /group`,
+  `GET /track` - both return name lists, cheap regardless of server size).
+- **Users are search-first, not listed.** The REST API's "list all users"
+  endpoint only returns bare UUIDs with no usernames, which isn't useful to
+  browse - so instead, search by username (`GET /user/lookup`), which
+  finds anyone LuckPerms already knows about (i.e. has joined before, or
+  been referenced via `/lp`). Recently-viewed users stay in the sidebar for
+  the rest of the session.
+- **Promote/Demote** a user along a track is available from their panel -
+  this is the same operation `/lp user <name> promote <track>` performs,
+  just from the UI.
+- A **Test a permission** box (using the REST API's own permission-check
+  endpoint) is available on every group/user panel - handy for confirming
+  what a player actually ends up with once inheritance is accounted for,
+  without hunting through parent groups by hand.
+
+### What's different from the official web editor
+
+- **Changes apply immediately**, not via LuckPerms' paste-and-apply-code
+  flow - every add/remove is a live REST API call the moment you make it,
+  matching how the rest of this panel's tabs (Whitelist, Ops, ...) work.
+  There's no separate "apply" step and nothing to copy-paste.
+- **No permission-key autocomplete.** The official editor suggests
+  permission nodes from LuckPerms' own in-memory registry as you type;
+  the REST API doesn't expose that registry, so permission keys are
+  freeform text here.
+- **Track reordering uses up/down buttons**, not drag-and-drop.
+- Every change is also recorded in Paloondra's own [audit log](#audit-log)
+  (who changed what, when) - the official editor has no equivalent.
+
+---
+
 ## Audit log
 
 A small, append-only history of mutating admin actions - script runs
@@ -1157,6 +1248,23 @@ you see this error anyway, you've likely customized that image's UID; set
 `RCON_PASSWORD` doesn't match `rcon.password` in `server.properties`, or
 the server hasn't picked up a changed password yet (restart it).
 
+**LuckPerms tab shows "LuckPerms tab is not configured"**
+`LUCKPERMS_API_URL` isn't set in `backend/.env` - see
+[LuckPerms](#luckperms). This requires deploying the separate LuckPerms
+REST API extension first; it isn't part of LuckPerms out of the box.
+
+**LuckPerms tab shows "Can't reach the LuckPerms REST API"**
+`LUCKPERMS_API_URL` is set but nothing answered. Confirm the extension is
+actually running (`curl <LUCKPERMS_API_URL>/health` from the backend host
+should return a 200), that the port is reachable from wherever the backend
+runs, and that no firewall is blocking it.
+
+**LuckPerms tab: "The LuckPerms REST API rejected the request"**
+The extension has `LUCKPERMS_REST_AUTH` enabled and either
+`LUCKPERMS_API_KEY` is unset, or it doesn't match one of the extension's
+own `LUCKPERMS_REST_AUTH_KEYS`. Set/fix `LUCKPERMS_API_KEY` in
+`backend/.env` and restart the backend.
+
 **Whitelist/Ops/bukkit.yml/spigot.yml tabs show a "not configured" message**
 `SERVER_ROOT_DIR` isn't set in `backend/.env` - all five files
 (`server.properties`, `bukkit.yml`, `spigot.yml`, `whitelist.json`,
@@ -1353,6 +1461,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 | **Whitelist** | View/add/remove whitelisted players and toggle the whitelist on/off, all via RCON (instant, no restart), plus a manual "reload from disk" for out-of-band edits - see [Whitelist](#whitelist) |
 | **Ops** | View/add/remove operators via RCON (instant), plus a per-player permission level editor (edits `ops.json` directly, requires a restart) - see [Ops](#ops) |
 | **MOTD** | Form + raw-text editor for the BetterMOTD plugin's `config.yml` (profiles, presets, maintenance mode, player-count display), auto-reloaded live over RCON after every save - see [MOTD (BetterMOTD)](#motd-bettermotd) |
+| **LuckPerms** | Permissions/groups/tracks editor modeled on LuckPerms' own web editor, talking to the separately-deployed LuckPerms REST API extension - requires `LUCKPERMS_API_URL` to be set - see [LuckPerms](#luckperms) |
 | **Users** | Admin-only. Add/remove panel accounts, change someone's role, reset a password - see [Creating users](#creating-users) |
 
 ## Notes on the implementation
@@ -1495,3 +1604,14 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   form view, only the known field paths a request names are ever written -
   the backend rejects any path outside that allowlist, so a crafted request
   can't use the "structured update" endpoint to touch arbitrary keys.
+- **The LuckPerms tab is arguably the most powerful one in this panel** -
+  it can grant any player (including whoever's playing as an admin's own
+  account) any permission node, up to and including full operator-level
+  in-game access. Grant the `luckperms` permission at least as carefully as
+  the admin role itself. `LUCKPERMS_API_KEY` is a credential like
+  `RCON_PASSWORD`/`SSH_PASSWORD` - it never reaches the frontend, only the
+  backend uses it. The REST API extension has no authentication enabled by
+  default (`LUCKPERMS_REST_AUTH`) and no TLS of its own - if it's reachable
+  from anywhere beyond `127.0.0.1`, turn its auth on and put it behind a
+  TLS-terminating reverse proxy, the same as you would for the backend
+  itself (see [Put it behind HTTPS](#put-it-behind-https)).

@@ -178,6 +178,7 @@ export const PERMISSION_KEYS = [
   'ops',
   'motd',
   'serverControl',
+  'luckperms',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -214,3 +215,89 @@ export interface StoredUser {
 
 /** What GET/POST/etc. on /api/users actually return - the hash is stripped. */
 export type PublicUser = Omit<StoredUser, 'passwordHash'>;
+
+// ---------------------------------------------------------------------------
+// LuckPerms (optional - talks to the separately-deployed LuckPerms REST API
+// extension, NOT part of LuckPerms itself - see luckperms.service.ts and
+// README's LuckPerms section). Mirrors https://github.com/LuckPerms/rest-api's
+// OpenAPI schema, verified directly against its spec rather than guessed.
+// ---------------------------------------------------------------------------
+
+export type LuckPermsNodeType =
+  | 'permission'
+  | 'regex_permission'
+  | 'inheritance'
+  | 'prefix'
+  | 'suffix'
+  | 'meta'
+  | 'weight'
+  | 'display_name';
+
+export interface LuckPermsContext {
+  key: string;
+  value: string;
+}
+
+/**
+ * LuckPerms encodes everything - permissions, group inheritance, prefixes/
+ * suffixes, custom meta, weight, display name - as one unified Node system.
+ * `type` is inferred server-side from `key`'s format, not sent by clients:
+ *   - permission:    key = the raw permission string, e.g. "minecraft.command.ban"
+ *   - inheritance:   key = "group.<name>"
+ *   - prefix/suffix: key = "prefix.<priority>.<text>" / "suffix.<priority>.<text>"
+ *   - meta:          key = "meta.<metaKey>.<metaValue>"
+ *   - weight:        key = "weight.<number>"
+ *   - display_name:  key = "displayname.<name>"
+ * `value` is the standard enabled/disabled flag (true for nearly every node
+ * that isn't a permission explicitly being negated).
+ */
+export interface LuckPermsNode {
+  key: string;
+  type: LuckPermsNodeType;
+  value: boolean;
+  context: LuckPermsContext[];
+  /** Unix seconds; absent/0 means permanent. */
+  expiry?: number;
+}
+
+/** Body for adding/deleting nodes - same shape as LuckPermsNode minus the server-derived `type`. */
+export interface LuckPermsNewNode {
+  key: string;
+  value?: boolean;
+  context?: LuckPermsContext[];
+  expiry?: number;
+}
+
+export interface LuckPermsMetadata {
+  meta: Record<string, string>;
+  prefix?: string;
+  suffix?: string;
+  primaryGroup?: string;
+}
+
+export interface LuckPermsUser {
+  uniqueId: string;
+  username?: string;
+  parentGroups: string[];
+  nodes: LuckPermsNode[];
+  metadata: LuckPermsMetadata;
+}
+
+export interface LuckPermsGroup {
+  name: string;
+  displayName?: string;
+  weight?: number;
+  nodes: LuckPermsNode[];
+  metadata: LuckPermsMetadata;
+}
+
+export interface LuckPermsTrack {
+  name: string;
+  groups: string[];
+}
+
+/** `result` is a string enum, not a boolean, per the REST API's own schema. */
+export interface LuckPermsPermissionCheckResult {
+  result: 'true' | 'false' | 'undefined';
+  node?: LuckPermsNode;
+}

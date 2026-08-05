@@ -319,6 +319,7 @@ export const PERMISSION_KEYS = [
   'ops',
   'motd',
   'serverControl',
+  'luckperms',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -331,4 +332,85 @@ export interface AppUser {
   /** Further restricts the `sftp` permission (File Manager) to one directory subtree - null means unrestricted. Always null for admins. */
   sftpRootPath: string | null;
   createdAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// LuckPerms (optional - talks to the separately-deployed LuckPerms REST API
+// extension via the backend proxy, see backend/src/services/luckperms.service.ts)
+// ---------------------------------------------------------------------------
+
+export type LuckPermsNodeType =
+  | 'permission'
+  | 'regex_permission'
+  | 'inheritance'
+  | 'prefix'
+  | 'suffix'
+  | 'meta'
+  | 'weight'
+  | 'display_name';
+
+export interface LuckPermsContext {
+  key: string;
+  value: string;
+}
+
+/**
+ * Everything - permissions, group inheritance, prefixes/suffixes, custom
+ * meta, weight, display name - is one unified Node system; `type` is
+ * inferred server-side from `key`'s format:
+ *   - permission:    key = the raw permission string, e.g. "minecraft.command.ban"
+ *   - inheritance:   key = "group.<name>"
+ *   - prefix/suffix: key = "prefix.<priority>.<text>" / "suffix.<priority>.<text>"
+ *   - meta:          key = "meta.<metaKey>.<metaValue>"
+ *   - weight:        key = "weight.<number>"
+ *   - display_name:  key = "displayname.<name>"
+ * See components/luckperms/nodeFormat.ts for the parse/build helpers.
+ */
+export interface LuckPermsNode {
+  key: string;
+  type: LuckPermsNodeType;
+  value: boolean;
+  context: LuckPermsContext[];
+  /** Unix seconds; absent/0 means permanent. */
+  expiry?: number;
+}
+
+export interface LuckPermsNewNode {
+  key: string;
+  value?: boolean;
+  context?: LuckPermsContext[];
+  expiry?: number;
+}
+
+export interface LuckPermsMetadata {
+  meta: Record<string, string>;
+  prefix?: string;
+  suffix?: string;
+  primaryGroup?: string;
+}
+
+export interface LuckPermsUser {
+  uniqueId: string;
+  username?: string;
+  parentGroups: string[];
+  nodes: LuckPermsNode[];
+  metadata: LuckPermsMetadata;
+}
+
+export interface LuckPermsGroup {
+  name: string;
+  displayName?: string;
+  weight?: number;
+  nodes: LuckPermsNode[];
+  metadata: LuckPermsMetadata;
+}
+
+export interface LuckPermsTrack {
+  name: string;
+  groups: string[];
+}
+
+export interface LuckPermsPermissionCheckResult {
+  result: 'true' | 'false' | 'undefined';
+  node?: LuckPermsNode;
 }

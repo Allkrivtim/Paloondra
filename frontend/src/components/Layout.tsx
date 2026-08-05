@@ -20,6 +20,7 @@ export default function Layout() {
     { to: '/whitelist', label: t('nav.whitelist'), permission: 'whitelist' },
     { to: '/ops', label: t('nav.ops'), permission: 'ops' },
     { to: '/motd', label: t('nav.motd'), permission: 'motd' },
+    { to: '/luckperms', label: t('nav.luckperms'), permission: 'luckperms' },
     // Only admins can manage other accounts - hidden here for everyone
     // else, but the real enforcement is server-side (requireAdmin on
     // every /api/users route), not this UI-level hiding.
