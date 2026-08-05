@@ -54,3 +54,102 @@ body,
 .dialog-enter {
   animation: dialog-in 140ms ease-out;
 }
+
+/* Rendered Markdown (FileEditor's Read mode, .md files only) - the panel's
+   own dark palette applied to marked's default HTML output, sanitized by
+   DOMPurify before it ever reaches this markup. */
+.markdown-body {
+  line-height: 1.65;
+}
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+.markdown-body h1 {
+  font-size: 1.5rem;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #2a2f3d;
+}
+.markdown-body h2 {
+  font-size: 1.25rem;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #2a2f3d;
+}
+.markdown-body h3 {
+  font-size: 1.1rem;
+}
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body blockquote,
+.markdown-body table,
+.markdown-body pre {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.5em;
+}
+.markdown-body li + li {
+  margin-top: 0.25em;
+}
+.markdown-body a {
+  color: #4ade80;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown-body code {
+  background: #1e2230;
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  font-size: 0.85em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.markdown-body pre {
+  background: #1e2230;
+  border: 1px solid #2a2f3d;
+  border-radius: 8px;
+  padding: 0.8em 1em;
+  overflow-x: auto;
+}
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+}
+.markdown-body blockquote {
+  border-left: 3px solid #2a2f3d;
+  padding-left: 1em;
+  color: #9ca3af;
+}
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid #2a2f3d;
+  margin: 1.5em 0;
+}
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid #2a2f3d;
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+.markdown-body th {
+  background: #1e2230;
+}
+.markdown-body img {
+  max-width: 100%;
+}

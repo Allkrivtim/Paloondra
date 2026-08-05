@@ -1345,7 +1345,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 | **Dashboard** | Online/offline status, Start/Stop/Restart buttons (run the configured scripts over SSH on the target server, output streams live), player count/TPS/host CPU/RAM/disk charts, online players with quick kick/ban/op/whitelist actions, a broadcast (`say`) box, and a recent-activity audit log panel |
 | **Console** | Native, Pterodactyl-style server console - follows the Minecraft container's own live log (`docker logs -f`) and sends typed commands straight into its console (`docker exec ... mc-send-to-console`), command history (↑/↓), auto-scroll with a "jump to latest" button, auto-reconnect - see [Console](#console) |
 | **SSH Terminal** | Full interactive shell (xterm.js + ssh2 PTY), resizable, auto-reconnects a fresh session if the connection drops |
-| **File Manager** | SFTP (or sudo-mode) browser: navigate, upload/download, rename, delete, mkdir, drag & drop (upload from OS, move between folders), built-in Monaco editor for text files |
+| **File Manager** | SFTP (or sudo-mode) browser: navigate, upload/download, rename, delete, mkdir, drag & drop (upload from OS, move between folders), built-in Monaco editor for text files - `.md` files open in a rendered Read view by default, with a toggle to switch to raw Text Edit |
 | **Plugins & Mods** | Installed plugins (enable/disable/delete/download, real names parsed from `plugin.yml`), install by URL or drag-and-drop `.jar`, and a Modrinth-backed plugin store with search/filters/install - see [Plugins & the plugin store](#plugins--the-plugin-store). A banner at the top makes clear only plugins are supported; mod support isn't available yet |
 | **Backups** | Trigger `BACKUP_SCRIPT`, list/download/delete what it produces - see [Backups](#backups) |
 | **Scheduled Tasks** | Cron-scheduled restarts or RCON commands, editable list, run-now - see [Scheduled tasks](#scheduled-tasks) |
@@ -1459,6 +1459,11 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   see [Enabling sudo mode](#enabling-sudo-mode-for-the-file-manager).
 - The SFTP file editor refuses to open files over `EDITOR_MAX_FILE_SIZE`
   bytes (default 2 MiB) or files that look binary.
+- `.md` files' Read view renders through `marked` and is sanitized with
+  `DOMPurify` before touching the DOM - markdown can embed raw HTML, and a
+  file's content isn't assumed trustworthy just because it's reachable
+  (a plugin's `README.md`, or anything a restricted user's directory
+  access lets them write).
 - **"Install plugin by URL" fetches any http(s) URL you give it** and
   uploads the result to `PLUGINS_DIR` as a `.jar` if it passes a basic
   zip-signature check. That's the feature working as designed, not a bug -
