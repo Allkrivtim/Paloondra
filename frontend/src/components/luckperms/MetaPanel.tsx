@@ -4,6 +4,7 @@ import { LuckPermsNewNode, LuckPermsNode } from '../../types';
 import { getErrorMessage } from '../../api/errors';
 import { useToast } from '../../context/ToastContext';
 import { buildMetaKey, isMetaNode, parseMetaKey } from './nodeFormat';
+import { getKnownMetaKeys } from './knownKeys';
 import NodeRow from './NodeRow';
 import Spinner from '../common/Spinner';
 
@@ -56,8 +57,14 @@ export default function MetaPanel({ nodes, onAdd, onRemove }: Props) {
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder={t('luckperms.metaKeyPlaceholder')}
+          list="lp-known-meta-keys"
           className="w-40 rounded-lg border border-panel-border bg-panel-surface2 px-3 py-1.5 font-mono text-sm text-panel-text outline-none focus:border-panel-accent"
         />
+        <datalist id="lp-known-meta-keys">
+          {getKnownMetaKeys().map((k) => (
+            <option key={k} value={k} />
+          ))}
+        </datalist>
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}

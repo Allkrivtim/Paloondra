@@ -989,6 +989,17 @@
       "weight": "Weight",
       "display_name": "Display Name",
       "regex_permission": "Regex permission"
-    }
+    },
+    "browseAll": "Browse all",
+    "allUsersTitle": "All Users",
+    "allUsersHint": "{{count}} known to LuckPerms (has joined before, or been referenced via /lp). Usernames are resolved a page at a time.",
+    "failedToLoadUsers": "Failed to load users",
+    "noUsers": "No users on this page.",
+    "columnUsername": "Username",
+    "columnUniqueId": "Unique ID",
+    "unknownUser": "(unknown)",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "pageOf": "Page {{page}} of {{total}}"
   }
 }

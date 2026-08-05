@@ -12,7 +12,8 @@ export type Selection =
   // SearchPanel), UserPanel resolves the real username itself once
   // GET /user/:uniqueId loads.
   | { kind: 'user'; uniqueId: string; username?: string }
-  | { kind: 'search' };
+  | { kind: 'search' }
+  | { kind: 'browse-users' };
 
 interface Props {
   groupNames: string[];
@@ -126,7 +127,17 @@ export default function EntitySidebar({ groupNames, trackNames, selected, onSele
       </section>
 
       <section>
-        <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-panel-muted">{t('luckperms.users')}</h3>
+        <div className="mb-1.5 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-panel-muted">{t('luckperms.users')}</h3>
+          <button
+            onClick={() => onSelect({ kind: 'browse-users' })}
+            className={`text-xs transition ${
+              selected?.kind === 'browse-users' ? 'text-panel-accent' : 'text-panel-muted hover:text-panel-accent'
+            }`}
+          >
+            {t('luckperms.browseAll')}
+          </button>
+        </div>
         <form onSubmit={handleSearch} className="flex gap-1">
           <input
             value={searchInput}

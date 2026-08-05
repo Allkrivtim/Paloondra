@@ -18,6 +18,12 @@ export async function getHealth(): Promise<{ configured: boolean; ok: boolean }>
 
 // --- Users -----------------------------------------------------------------
 
+/** Every user LuckPerms has a record for - bare UUIDs only, no usernames. See UsersBrowserPanel for how these get resolved to something browsable. */
+export async function listUsers(): Promise<string[]> {
+  const res = await api.get('/luckperms/users');
+  return res.data.users;
+}
+
 export async function lookupUser(params: { username?: string; uniqueId?: string }): Promise<{ uniqueId: string; username: string } | null> {
   const res = await api.get('/luckperms/users/lookup', { params });
   return res.data.user;

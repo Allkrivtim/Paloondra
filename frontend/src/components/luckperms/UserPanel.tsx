@@ -4,6 +4,7 @@ import { getUser, addUserNode, deleteUserNodes, checkUserPermission, promoteUser
 import { getErrorMessage } from '../../api/errors';
 import { useToast } from '../../context/ToastContext';
 import { LuckPermsNewNode, LuckPermsNode, LuckPermsUser } from '../../types';
+import { recordNodes } from './knownKeys';
 import PermissionsPanel from './PermissionsPanel';
 import ParentsPanel from './ParentsPanel';
 import ChatMetaPanel from './ChatMetaPanel';
@@ -46,6 +47,10 @@ export default function UserPanel({ uniqueId, username, allGroupNames, allTrackN
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (user) recordNodes(user.nodes);
+  }, [user]);
 
   async function handleAdd(node: LuckPermsNewNode) {
     setUser(await addUserNode(uniqueId, node));

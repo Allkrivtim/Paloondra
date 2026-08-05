@@ -991,6 +991,17 @@
       "weight": "Вес",
       "display_name": "Отображаемое имя",
       "regex_permission": "Regex-право"
-    }
+    },
+    "browseAll": "Показать всех",
+    "allUsersTitle": "Все пользователи",
+    "allUsersHint": "{{count}} известно LuckPerms (заходили раньше или упоминались через /lp). Имена пользователей разрешаются постранично.",
+    "failedToLoadUsers": "Не удалось загрузить пользователей",
+    "noUsers": "На этой странице нет пользователей.",
+    "columnUsername": "Имя пользователя",
+    "columnUniqueId": "Уникальный ID",
+    "unknownUser": "(неизвестно)",
+    "prevPage": "Назад",
+    "nextPage": "Далее",
+    "pageOf": "Страница {{page}} из {{total}}"
   }
 }
