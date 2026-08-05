@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import path from 'path';
 import bcrypt from 'bcryptjs';
 import { readJsonFile, writeJsonFile } from './jsonStore';
 import { env } from '../config/env';
@@ -33,17 +34,24 @@ class UsersService {
   private ensureLoaded(): Promise<void> {
     if (!this.loaded) {
       this.loaded = readJsonFile<StoredUser[]>(FILE, []).then(async (users) => {
-        // Migrate-on-load: records written before granular permissions
-        // existed have no `permissions` field. Backfill to full access (what
-        // every non-admin user had, implicitly, until now) and persist the
-        // backfill so it only ever has to happen once per record.
+        // Migrate-on-load: records written before granular permissions (or
+        // before per-directory File Manager scoping) existed are missing
+        // those fields entirely. Backfill both to "unrestricted", matching
+        // the historical behavior, and persist the backfill so it only
+        // ever has to happen once per record. Read as a loose partial
+        // shape here on purpose - that's the whole reason this exists, the
+        // persisted JSON may not match the current StoredUser interface.
         let migrated = false;
-        this.users = users.map((u) => {
-          if (!Array.isArray((u as Partial<StoredUser>).permissions)) {
-            migrated = true;
-            return { ...u, permissions: [...ALL_PERMISSIONS] };
-          }
-          return u;
+        this.users = users.map((raw) => {
+          const u = raw as Partial<StoredUser> & Omit<StoredUser, 'permissions' | 'sftpRootPath'>;
+          const hasPermissions = Array.isArray(u.permissions);
+          const hasRootPath = 'sftpRootPath' in u;
+          if (!hasPermissions || !hasRootPath) migrated = true;
+          return {
+            ...u,
+            permissions: hasPermissions ? (u.permissions as PermissionKey[]) : [...ALL_PERMISSIONS],
+            sftpRootPath: hasRootPath ? (u.sftpRootPath ?? null) : null,
+          };
         });
         if (migrated) await this.persist();
       });
@@ -80,6 +88,7 @@ class UsersService {
       passwordHash: u.passwordHash,
       role: 'admin' as UserRole,
       permissions: [...ALL_PERMISSIONS],
+      sftpRootPath: null,
       createdAt: Date.now(),
     }));
     await this.persist();
@@ -110,13 +119,39 @@ class UsersService {
   }
 
   /**
+   * `undefined`/`null`/empty/"/" all mean "unrestricted" (stored as null) -
+   * this is deliberately lenient about what counts as "no restriction" so
+   * clearing the field in the UI (empty input) does the intuitive thing.
+   * Anything else must be an absolute path; normalized the same way
+   * sftp.routes.ts normalizes any other client-supplied path, so a stored
+   * root and an incoming request path are always comparable directly.
+   */
+  private normalizeSftpRootPath(raw: unknown): string | null {
+    if (raw === null || raw === undefined) return null;
+    if (typeof raw !== 'string') throw new Error('sftpRootPath must be a string or null');
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed === '/') return null;
+    if (!trimmed.startsWith('/')) throw new Error('sftpRootPath must be an absolute path (starting with "/")');
+    if (trimmed.includes('\0')) throw new Error('Invalid sftpRootPath');
+    const normalized = path.posix.normalize(trimmed).replace(/\/+$/, '');
+    return normalized || '/';
+  }
+
+  /**
    * `permissions` is ignored for role: 'admin' (always gets ALL_PERMISSIONS,
    * even though the check is bypassed for admins - see StoredUser). For
    * role: 'user', defaults to ALL_PERMISSIONS when omitted, matching what
    * "user" meant before granular permissions existed - restriction is
-   * opt-in, not the default.
+   * opt-in, not the default. `sftpRootPath` likewise is always null for
+   * admins regardless of what's passed.
    */
-  async create(username: string, password: string, role: UserRole, permissions?: PermissionKey[]): Promise<PublicUser> {
+  async create(
+    username: string,
+    password: string,
+    role: UserRole,
+    permissions?: PermissionKey[],
+    sftpRootPath?: string | null,
+  ): Promise<PublicUser> {
     await this.ensureLoaded();
     const name = username.trim();
     if (!name) throw new Error('Username is required');
@@ -131,6 +166,7 @@ class UsersService {
       passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS),
       role,
       permissions: role === 'admin' ? [...ALL_PERMISSIONS] : (permissions ?? [...ALL_PERMISSIONS]),
+      sftpRootPath: role === 'admin' ? null : this.normalizeSftpRootPath(sftpRootPath),
       createdAt: Date.now(),
     };
     this.users.push(user);
@@ -161,11 +197,13 @@ class UsersService {
       throw new Error('Cannot demote the last remaining admin');
     }
     target.role = role;
-    // Promotion to admin always gets full access, overwriting whatever
-    // restricted set they had as a 'user' - see StoredUser's `permissions`
-    // doc comment for why admins always carry ALL_PERMISSIONS at rest.
+    // Promotion to admin always gets full, unrestricted access, overwriting
+    // whatever restricted set/root they had as a 'user' - see StoredUser's
+    // `permissions` doc comment for why admins always carry ALL_PERMISSIONS
+    // (and a null sftpRootPath) at rest.
     if (role === 'admin') {
       target.permissions = [...ALL_PERMISSIONS];
+      target.sftpRootPath = null;
     }
     await this.persist();
     return toPublic(target);
@@ -180,6 +218,19 @@ class UsersService {
       throw new Error('Permissions only apply to non-admin accounts');
     }
     target.permissions = [...permissions];
+    await this.persist();
+    return toPublic(target);
+  }
+
+  /** Only valid for role: 'user' accounts, same rationale as setPermissions(). Pass null to remove the restriction (full access within whatever `sftp` permission already allows). */
+  async setSftpRootPath(id: string, sftpRootPath: string | null): Promise<PublicUser> {
+    await this.ensureLoaded();
+    const target = this.users.find((u) => u.id === id);
+    if (!target) throw new Error('User not found');
+    if (target.role === 'admin') {
+      throw new Error('File Manager restrictions only apply to non-admin accounts');
+    }
+    target.sftpRootPath = this.normalizeSftpRootPath(sftpRootPath);
     await this.persist();
     return toPublic(target);
   }

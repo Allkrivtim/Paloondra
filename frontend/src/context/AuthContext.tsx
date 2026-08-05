@@ -6,6 +6,8 @@ interface AuthContextValue {
   username: string | null;
   role: UserRole | null;
   permissions: PermissionKey[];
+  /** Further restricts the `sftp` permission to one directory subtree - null means unrestricted (also always null for admins). */
+  sftpRootPath: string | null;
   /** Convenience for `role === 'admin'` - gates the Users tab and its nav entry. */
   isAdmin: boolean;
   /** True for admins regardless of `permissions` (always bypassed), or when the key is present in `permissions`. */
@@ -22,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [username, setUsername] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [permissions, setPermissions] = useState<PermissionKey[]>([]);
+  const [sftpRootPath, setSftpRootPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUsername(res.data.username);
         setRole(res.data.role);
         setPermissions(res.data.permissions ?? []);
+        setSftpRootPath(res.data.sftpRootPath ?? null);
       })
       .catch(() => clearToken())
       .finally(() => setLoading(false));
@@ -47,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsername(res.data.username);
     setRole(res.data.role);
     setPermissions(res.data.permissions ?? []);
+    setSftpRootPath(res.data.sftpRootPath ?? null);
   }, []);
 
   const logout = useCallback(() => {
@@ -55,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsername(null);
     setRole(null);
     setPermissions([]);
+    setSftpRootPath(null);
   }, []);
 
   const isAdmin = role === 'admin';
@@ -68,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username,
       role,
       permissions,
+      sftpRootPath,
       isAdmin,
       hasPermission,
       isAuthenticated: !!username,
@@ -75,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
     }),
-    [username, role, permissions, isAdmin, hasPermission, loading, login, logout],
+    [username, role, permissions, sftpRootPath, isAdmin, hasPermission, loading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

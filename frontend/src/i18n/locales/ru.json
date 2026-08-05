@@ -723,7 +723,10 @@
     "savePermissions": "Сохранить",
     "cancel": "Отмена",
     "permissionsChangedToast": "Права доступа «{{name}}» обновлены",
-    "failedToChangePermissions": "Не удалось обновить права доступа"
+    "failedToChangePermissions": "Не удалось обновить права доступа",
+    "sftpRootPathLabel": "Корневая папка Файлового менеджера (необязательно)",
+    "sftpRootPathPlaceholder": "/ (полный доступ)",
+    "sftpRootPathHint": "Ограничивает вкладку «Файловый менеджер» этой папкой и её подпапками. Оставьте пустым для полного доступа. Действует, только если выше отмечено право «Файловый менеджер»."
   },
   "motd": {
     "title": "MOTD (BetterMOTD)",

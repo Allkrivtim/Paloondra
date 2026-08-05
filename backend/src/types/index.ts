@@ -201,6 +201,14 @@ export interface StoredUser {
    * them out, with no special-case migration needed.
    */
   permissions: PermissionKey[];
+  /**
+   * Optional further restriction of the `sftp` permission (File Manager)
+   * to one directory subtree, e.g. "/home/minecraft/server/plugins" - null
+   * means unrestricted (the historical behavior: anywhere SSH_USER/sudo
+   * can reach). Always null for admins, same rationale as `permissions`.
+   * Irrelevant if `permissions` doesn't include `sftp` at all.
+   */
+  sftpRootPath: string | null;
   createdAt: number;
 }
 

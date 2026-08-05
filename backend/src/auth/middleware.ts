@@ -4,7 +4,7 @@ import { usersService } from '../services/users.service';
 import { PermissionKey, UserRole } from '../types';
 
 export interface AuthedRequest extends Request {
-  user?: { username: string; role: UserRole; permissions: PermissionKey[] };
+  user?: { username: string; role: UserRole; permissions: PermissionKey[]; sftpRootPath: string | null };
 }
 
 /**
@@ -30,7 +30,7 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
       res.status(401).json({ error: 'Invalid or expired token' });
       return;
     }
-    req.user = { username: user.username, role: user.role, permissions: user.permissions };
+    req.user = { username: user.username, role: user.role, permissions: user.permissions, sftpRootPath: user.sftpRootPath };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });

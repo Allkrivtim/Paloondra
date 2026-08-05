@@ -1,6 +1,14 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { createUser, deleteUser, getUsers, resetUserPassword, setUserPermissions, setUserRole } from '../../api/users';
+import {
+  createUser,
+  deleteUser,
+  getUsers,
+  resetUserPassword,
+  setUserPermissions,
+  setUserRole,
+  setUserSftpRootPath,
+} from '../../api/users';
 import { getErrorMessage } from '../../api/errors';
 import { useToast } from '../../context/ToastContext';
 import { useDialog } from '../../context/DialogContext';
@@ -36,11 +44,14 @@ export default function Users() {
   // "user" meant before granular permissions existed, so restriction is
   // opt-in (uncheck things), not accidental.
   const [permissionsInput, setPermissionsInput] = useState<PermissionKey[]>([...PERMISSION_KEYS]);
+  // Empty means unrestricted - only meaningful when 'sftp' is checked above.
+  const [sftpRootPathInput, setSftpRootPathInput] = useState('');
   const [adding, setAdding] = useState(false);
 
   // Which row's permission editor is expanded - only one at a time.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingPermissions, setEditingPermissions] = useState<PermissionKey[]>([]);
+  const [editingSftpRootPath, setEditingSftpRootPath] = useState('');
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -79,12 +90,19 @@ export default function Users() {
     if (!name || !passwordInput) return;
     setAdding(true);
     try {
-      const user = await createUser(name, passwordInput, roleInput, roleInput === 'user' ? permissionsInput : undefined);
+      const user = await createUser(
+        name,
+        passwordInput,
+        roleInput,
+        roleInput === 'user' ? permissionsInput : undefined,
+        roleInput === 'user' ? sftpRootPathInput.trim() || null : undefined,
+      );
       setUsers((prev) => [...prev, user]);
       setUsernameInput('');
       setPasswordInput('');
       setRoleInput('user');
       setPermissionsInput([...PERMISSION_KEYS]);
+      setSftpRootPathInput('');
       toast.success(t('users.addedToast', { name: user.username }));
     } catch (err) {
       toast.error(getErrorMessage(err, t('users.failedToAdd')));
@@ -145,12 +163,17 @@ export default function Users() {
   function startEditingPermissions(user: AppUser) {
     setEditingId(user.id);
     setEditingPermissions(user.permissions);
+    setEditingSftpRootPath(user.sftpRootPath ?? '');
   }
 
   async function handleSavePermissions(user: AppUser) {
     await withBusy(user.id, async () => {
       try {
-        const updated = await setUserPermissions(user.id, editingPermissions);
+        let updated = await setUserPermissions(user.id, editingPermissions);
+        const nextRootPath = editingSftpRootPath.trim() || null;
+        if (nextRootPath !== (user.sftpRootPath ?? null)) {
+          updated = await setUserSftpRootPath(user.id, nextRootPath);
+        }
         setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
         setEditingId(null);
         toast.success(t('users.permissionsChangedToast', { name: updated.username }));
@@ -207,6 +230,22 @@ export default function Users() {
               {t('users.permissionsLabel')}
             </div>
             <PermissionGrid value={permissionsInput} onChange={setPermissionsInput} />
+          </div>
+        )}
+
+        {/* Only meaningful alongside the 'sftp' permission - hidden otherwise so it's not mistaken for a general restriction. */}
+        {roleInput === 'user' && permissionsInput.includes('sftp') && (
+          <div>
+            <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-panel-muted">
+              {t('users.sftpRootPathLabel')}
+            </div>
+            <input
+              value={sftpRootPathInput}
+              onChange={(e) => setSftpRootPathInput(e.target.value)}
+              placeholder={t('users.sftpRootPathPlaceholder')}
+              className="w-full rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 text-sm text-panel-text outline-none focus:border-panel-accent"
+            />
+            <p className="mt-1 text-xs text-panel-muted">{t('users.sftpRootPathHint')}</p>
           </div>
         )}
       </form>
@@ -323,6 +362,20 @@ export default function Users() {
                       <tr className="border-t border-panel-border bg-panel-surface2/50">
                         <td colSpan={5} className="px-4 py-3">
                           <PermissionGrid value={editingPermissions} onChange={setEditingPermissions} />
+                          {editingPermissions.includes('sftp') && (
+                            <div className="mt-3">
+                              <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-panel-muted">
+                                {t('users.sftpRootPathLabel')}
+                              </div>
+                              <input
+                                value={editingSftpRootPath}
+                                onChange={(e) => setEditingSftpRootPath(e.target.value)}
+                                placeholder={t('users.sftpRootPathPlaceholder')}
+                                className="w-full max-w-md rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 text-sm text-panel-text outline-none focus:border-panel-accent"
+                              />
+                              <p className="mt-1 text-xs text-panel-muted">{t('users.sftpRootPathHint')}</p>
+                            </div>
+                          )}
                           <div className="mt-3 flex justify-end gap-2">
                             <button
                               onClick={() => setEditingId(null)}

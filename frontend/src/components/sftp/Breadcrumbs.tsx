@@ -4,14 +4,19 @@ interface Props {
   path: string;
   onNavigate: (path: string) => void;
   onDropMove?: (targetDir: string) => void;
+  /** When set (a restricted user's sftpRootPath), crumbs only render from this directory downward instead of always starting at "/" - navigating above it would just 403 anyway. */
+  rootPath?: string | null;
 }
 
-export default function Breadcrumbs({ path, onNavigate, onDropMove }: Props) {
+export default function Breadcrumbs({ path, onNavigate, onDropMove, rootPath }: Props) {
   const { t } = useTranslation();
   const parts = path.split('/').filter(Boolean);
-  const crumbs = [{ label: t('sftp.rootBreadcrumb'), path: '/' }, ...parts.map((part, i) => ({
+  const rootDepth = rootPath ? rootPath.split('/').filter(Boolean).length : 0;
+  const visibleParts = parts.slice(rootDepth);
+  const rootLabel = rootPath ? (parts[rootDepth - 1] ?? rootPath) : t('sftp.rootBreadcrumb');
+  const crumbs = [{ label: rootLabel, path: rootPath || '/' }, ...visibleParts.map((part, i) => ({
     label: part,
-    path: '/' + parts.slice(0, i + 1).join('/'),
+    path: '/' + parts.slice(0, rootDepth + i + 1).join('/'),
   }))];
 
   return (

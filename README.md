@@ -301,6 +301,31 @@ and the same check on the `/ws/ssh` and `/ws/game-console` WebSocket
 upgrade handshake) — a restricted user hitting a gated API directly gets a
 403, not just a hidden button.
 
+### Restricting the File Manager to one directory
+
+The `sftp` permission on its own grants the same full access to whatever
+`SSH_USER` (or `sudo`, if `SFTP_USE_SUDO=true`) can reach that it always
+has. To go further — give one user the whole File Manager, another only a
+specific directory — set a **File Manager root path** on that user, from
+either the add-user form or the row's **Permissions** column in the Users
+tab (shown whenever `sftp` is checked). Leave it blank for unrestricted
+access; set it to an absolute path (e.g.
+`/home/minecraft/server/plugins`) to confine that user to it and its
+subdirectories.
+
+- Enforced server-side on every File Manager route (list, upload,
+  download, edit, rename, move, delete, mkdir) — a request for a path
+  outside the assigned root gets a `403`, the same "UX vs. real
+  enforcement" split as every other permission. The File Manager tab
+  itself also opens directly into the assigned directory and clamps its
+  breadcrumbs so there's nothing to click above it.
+- Always `null` (unrestricted) for admins, and cleared automatically if a
+  restricted user is promoted to admin — same rationale as permissions
+  being reset on promotion (see above).
+- Independent of the `sftp` permission checkbox itself: a root path with
+  `sftp` unchecked has no effect (the whole tab/API is already blocked);
+  it only refines what an `sftp`-permitted user can reach.
+
 ### Bootstrapping the first admin
 
 `USERS` in `.env` is a **one-time seed**, not an ongoing source of truth.
@@ -1180,6 +1205,12 @@ encrypted with a passphrase you haven't set in `SSH_KEY_PASSPHRASE`.
 `SSH_USER` doesn't own those files over plain SFTP. Either change
 `SSH_USER` to one that does, or enable
 [sudo mode](#enabling-sudo-mode-for-the-file-manager).
+
+**File Manager: "That path is outside your permitted directory (...)"**
+Expected if that user has a File Manager root path set - see
+[Restricting the File Manager to one directory](#restricting-the-file-manager-to-one-directory).
+Have an admin clear or widen it from that user's Permissions column in the
+Users tab; the change applies on the user's very next request.
 
 **Sudo mode enabled but still getting permission errors**
 - Confirm the sudoers entry is in place and matches `SSH_USER` exactly:

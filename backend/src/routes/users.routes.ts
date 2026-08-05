@@ -26,6 +26,19 @@ function parsePermissions(value: unknown): PermissionKey[] | undefined {
   return value as PermissionKey[];
 }
 
+/**
+ * Loosely validated here (must be a string, null, or absent) - the real
+ * shape validation (absolute path, etc.) happens once in
+ * usersService.normalizeSftpRootPath, so both the create and dedicated
+ * set-root routes get identical rules for free.
+ */
+function parseSftpRootPath(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') throw new Error('sftpRootPath must be a string or null');
+  return value;
+}
+
 router.get('/', async (_req, res) => {
   try {
     res.json(await usersService.list());
@@ -46,7 +59,8 @@ router.post('/', async (req: AuthedRequest, res) => {
       return;
     }
     const permissions = parsePermissions(req.body?.permissions);
-    const user = await usersService.create(username, password, role, permissions);
+    const sftpRootPath = parseSftpRootPath(req.body?.sftpRootPath);
+    const user = await usersService.create(username, password, role, permissions, sftpRootPath);
     await auditLogService.record(req.user!.username, `Created user "${user.username}"`, role);
     res.json(user);
   } catch (err) {
@@ -81,6 +95,25 @@ router.put('/:id/permissions', async (req: AuthedRequest, res) => {
     res.json(user);
   } catch (err) {
     sendError(res, err, 'Failed to change permissions', 400);
+  }
+});
+
+router.put('/:id/sftp-root', async (req: AuthedRequest, res) => {
+  try {
+    const sftpRootPath = parseSftpRootPath(req.body?.sftpRootPath);
+    if (sftpRootPath === undefined) {
+      res.status(400).json({ error: 'sftpRootPath must be a string or null' });
+      return;
+    }
+    const user = await usersService.setSftpRootPath(req.params.id, sftpRootPath);
+    await auditLogService.record(
+      req.user!.username,
+      `Changed File Manager root for "${user.username}"`,
+      user.sftpRootPath ?? '(unrestricted)',
+    );
+    res.json(user);
+  } catch (err) {
+    sendError(res, err, 'Failed to change File Manager root', 400);
   }
 });
 
