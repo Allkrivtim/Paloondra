@@ -470,7 +470,14 @@ talks **directly to the Docker container over SSH, not RCON**:
   typically membership in the `docker` group, or equivalent access.
   Neither Docker Compose nor a `dockerode`/Docker API client is involved;
   it's the same "run a plain command over the existing SSH connection"
-  approach as everything else in this panel.
+  approach as everything else in this panel. **The Minecraft container
+  itself** (not this backend) also needs `CREATE_CONSOLE_IN_PIPE=true` set
+  in its own environment - `mc-send-to-console` writes into a named pipe
+  at `/tmp/minecraft-console-in` inside that container, and the
+  itzg/minecraft-server image only creates that pipe when this variable is
+  set. Without it, *reading* the console (`docker logs -f`) still works
+  fine, but *sending* commands fails with an error naming the missing
+  pipe - see [troubleshooting](#troubleshooting) below.
 - RCON is **not** used by this tab at all, and is otherwise completely
   unaffected - the Dashboard's quick actions, Whitelist, Ops, scheduled
   RCON tasks, and the MOTD tab's reload all keep working through RCON
@@ -1104,6 +1111,13 @@ unrelated to RCON; the Console tab talks to the Docker container directly.
 Check that `mc-send-to-console` exists inside the container (it ships with
 the `itzg/minecraft-server` image) - a failure here shows up as a system
 line directly in the console log, e.g. "Failed to send command: ...".
+
+**Console tab: "Failed to send command: ... Console pipe needs to be enabled by setting CREATE_CONSOLE_IN_PIPE to true" / "Named pipe /tmp/minecraft-console-in is missing"**
+The Minecraft container itself wasn't started with `CREATE_CONSOLE_IN_PIPE=true`
+(this is separate from anything in `backend/.env` - it's a setting on the
+Minecraft server's own container). Add `CREATE_CONSOLE_IN_PIPE: "true"` to
+that container's environment and restart it; *reading* the console keeps
+working the whole time, only *sending* commands needs this.
 
 **RCON commands fail with an auth-looking error**
 `RCON_PASSWORD` doesn't match `rcon.password` in `server.properties`, or
