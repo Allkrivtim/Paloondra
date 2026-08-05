@@ -9,6 +9,14 @@ export class LuckPermsApiError extends Error {
   }
 }
 
+// Node's fetch has no connect timeout by default - a host that's firewalled
+// (SYN silently dropped) or just wrong can hang for a minute or more on the
+// underlying OS TCP timeout before fetch() ever rejects. That reads to a
+// user as "it's stuck", not "it failed" - capping it here means a bad
+// LUCKPERMS_API_URL fails fast with a message that actually points at the
+// right thing to check, instead of a long silent wait.
+const REQUEST_TIMEOUT_MS = 8000;
+
 /**
  * Thin HTTP client for the (separately-deployed, opt-in) LuckPerms REST API
  * extension - https://github.com/LuckPerms/rest-api. NOT part of LuckPerms
@@ -28,13 +36,25 @@ async function lpFetch<T>(path: string, init?: RequestInit): Promise<T> {
     headers.Authorization = `Bearer ${env.luckperms.apiKey}`;
   }
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response: Response;
   try {
-    response = await fetch(`${env.luckperms.apiUrl}${path}`, { ...init, headers });
+    response = await fetch(`${env.luckperms.apiUrl}${path}`, { ...init, headers, signal: controller.signal });
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new LuckPermsApiError(
+        `Timed out after ${REQUEST_TIMEOUT_MS / 1000}s waiting for the LuckPerms REST API at ${env.luckperms.apiUrl}. ` +
+          `A timeout (rather than an immediate connection error) usually means the host/port is unreachable - firewalled, ` +
+          `wrong IP/host, or nothing routes there - not that the extension is just slow. Confirm LUCKPERMS_API_URL is correct ` +
+          `and reachable from this backend, e.g. "curl ${env.luckperms.apiUrl}/health" run ON THE BACKEND HOST.`,
+      );
+    }
     throw new LuckPermsApiError(
       `Could not reach the LuckPerms REST API at ${env.luckperms.apiUrl}: ${err instanceof Error ? err.message : String(err)}`,
     );
+  } finally {
+    clearTimeout(timer);
   }
 
   if (response.status === 401 || response.status === 403) {

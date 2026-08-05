@@ -1253,11 +1253,28 @@ the server hasn't picked up a changed password yet (restart it).
 [LuckPerms](#luckperms). This requires deploying the separate LuckPerms
 REST API extension first; it isn't part of LuckPerms out of the box.
 
-**LuckPerms tab shows "Can't reach the LuckPerms REST API"**
-`LUCKPERMS_API_URL` is set but nothing answered. Confirm the extension is
-actually running (`curl <LUCKPERMS_API_URL>/health` from the backend host
-should return a 200), that the port is reachable from wherever the backend
-runs, and that no firewall is blocking it.
+**LuckPerms tab shows "Can't reach the LuckPerms REST API" after a long wait**
+Requests to it time out after 8s rather than hanging indefinitely - a long
+wait *before* this error (rather than an instant one) is itself a clue: it
+usually means the connection attempt itself is stuck (firewalled/dropped,
+wrong host/IP, nothing routes there), not that the extension is just slow
+to respond. An immediate error, by contrast, usually means "reachable but
+nothing's listening on that port" (wrong port, extension not running) or a
+DNS failure (typo'd hostname).
+- From the **backend host itself** (not your own machine), run
+  `curl <LUCKPERMS_API_URL>/health` - if that also hangs or fails, it's a
+  network/deployment problem outside Paloondra, and the fix is on the
+  extension's side (confirm the container/process is actually running,
+  confirm the host/port, check firewall rules between the backend and
+  wherever the extension runs).
+- If it's a Docker deployment of the extension, confirm which network it's
+  on and which host/port it's actually bound to and published on -
+  `LUCKPERMS_API_URL` needs to point at something reachable from the
+  Paloondra *backend's* network, not necessarily `localhost` (that only
+  works if the extension and backend share the same host/network
+  namespace).
+- Confirm you're not accidentally pointing at the extension's *internal*
+  container port when only a different port was published to the host.
 
 **LuckPerms tab: "The LuckPerms REST API rejected the request"**
 The extension has `LUCKPERMS_REST_AUTH` enabled and either
