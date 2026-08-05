@@ -447,7 +447,7 @@ talks **directly to the Docker container over SSH, not RCON**:
   following on backend startup (if configured) and keeps a bounded
   in-memory history (1000 lines) so a newly-opened tab isn't empty.
 - **Input**: typed commands are sent with `docker exec -u MC_CONSOLE_EXEC_USER
-  MC_CONTAINER mc-send-to-console -- <command>` - `mc-send-to-console` is
+  MC_CONTAINER mc-send-to-console <command>` - `mc-send-to-console` is
   the itzg/minecraft-server image's own helper for writing directly to the
   server's console stdin. There's no RCON round-trip and nothing to
   correlate a response to - whatever the server prints in response shows
