@@ -212,6 +212,19 @@ export const env = {
     apiUrl: optional('MODRINTH_API_URL', 'https://api.modrinth.com/v2'),
   },
 
+  // Backs the LuckPerms tab. Unlike everything else in this file, this
+  // isn't reached over the existing SSH connection - it's a separate HTTP
+  // service the LuckPerms REST API extension exposes on the target host
+  // (NOT part of LuckPerms out of the box - see README's LuckPerms
+  // section for how to deploy it). Optional, like PLUGINS_DIR/MC_CONTAINER
+  // - unset means the tab shows a "not configured" message.
+  luckperms: {
+    apiUrl: process.env.LUCKPERMS_API_URL?.trim().replace(/\/+$/, '') || undefined,
+    // Only needed if the extension's LUCKPERMS_REST_AUTH is enabled (it
+    // isn't by default) - sent as `Authorization: Bearer <key>`.
+    apiKey: process.env.LUCKPERMS_API_KEY?.trim() || undefined,
+  },
+
   // Local directory ON THIS BACKEND'S HOST (not the target server - no SSH
   // involved) where the scheduler and audit log persist their JSON state.
   dataDir: optional('DATA_DIR', './data'),
