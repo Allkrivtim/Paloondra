@@ -721,7 +721,10 @@
     "savePermissions": "Save",
     "cancel": "Cancel",
     "permissionsChangedToast": "Updated permissions for \"{{name}}\"",
-    "failedToChangePermissions": "Failed to update permissions"
+    "failedToChangePermissions": "Failed to update permissions",
+    "sftpRootPathLabel": "File Manager root path (optional)",
+    "sftpRootPathPlaceholder": "/ (full access)",
+    "sftpRootPathHint": "Restricts the File Manager tab to this directory and its subdirectories. Leave blank for full access. Only applies while the File Manager permission above is checked."
   },
   "motd": {
     "title": "MOTD (BetterMOTD)",

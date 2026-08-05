@@ -17,6 +17,7 @@ import { getErrorMessage } from '../../api/errors';
 import { SftpEntry } from '../../types';
 import { useToast } from '../../context/ToastContext';
 import { useDialog } from '../../context/DialogContext';
+import { useAuth } from '../../context/AuthContext';
 import Breadcrumbs from '../sftp/Breadcrumbs';
 import FileEditor from '../sftp/FileEditor';
 import Spinner from '../common/Spinner';
@@ -34,6 +35,7 @@ export default function SftpManager() {
   const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
+  const { isAdmin, sftpRootPath } = useAuth();
   const [currentPath, setCurrentPath] = useState('/');
   const [entries, setEntries] = useState<SftpEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -208,7 +210,12 @@ export default function SftpManager() {
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Breadcrumbs path={currentPath} onNavigate={refresh} onDropMove={handleMoveTo} />
+        <Breadcrumbs
+          path={currentPath}
+          onNavigate={refresh}
+          onDropMove={handleMoveTo}
+          rootPath={isAdmin ? null : sftpRootPath}
+        />
         <div className="flex gap-2">
           <button
             onClick={handleMkdir}

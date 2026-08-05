@@ -11,8 +11,9 @@ export async function createUser(
   password: string,
   role: UserRole,
   permissions?: PermissionKey[],
+  sftpRootPath?: string | null,
 ): Promise<AppUser> {
-  const res = await api.post('/users', { username, password, role, permissions });
+  const res = await api.post('/users', { username, password, role, permissions, sftpRootPath });
   return res.data;
 }
 
@@ -23,6 +24,12 @@ export async function setUserRole(id: string, role: UserRole): Promise<AppUser> 
 
 export async function setUserPermissions(id: string, permissions: PermissionKey[]): Promise<AppUser> {
   const res = await api.put(`/users/${id}/permissions`, { permissions });
+  return res.data;
+}
+
+/** Pass null to remove the restriction (full access within whatever `sftp` permission already allows). */
+export async function setUserSftpRootPath(id: string, sftpRootPath: string | null): Promise<AppUser> {
+  const res = await api.put(`/users/${id}/sftp-root`, { sftpRootPath });
   return res.data;
 }
 

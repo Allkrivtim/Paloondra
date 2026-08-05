@@ -328,5 +328,7 @@ export interface AppUser {
   username: string;
   role: UserRole;
   permissions: PermissionKey[];
+  /** Further restricts the `sftp` permission (File Manager) to one directory subtree - null means unrestricted. Always null for admins. */
+  sftpRootPath: string | null;
   createdAt: number;
 }

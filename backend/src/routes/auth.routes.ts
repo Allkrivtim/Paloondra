@@ -16,7 +16,13 @@ router.post('/login', async (req, res) => {
   }
 
   const token = issueToken(user.username);
-  res.json({ token, username: user.username, role: user.role, permissions: user.permissions });
+  res.json({
+    token,
+    username: user.username,
+    role: user.role,
+    permissions: user.permissions,
+    sftpRootPath: user.sftpRootPath,
+  });
 });
 
 // Stateless JWT - nothing to invalidate server side, endpoint exists for symmetry.
@@ -25,7 +31,12 @@ router.post('/logout', requireAuth, (_req, res) => {
 });
 
 router.get('/me', requireAuth, (req: AuthedRequest, res) => {
-  res.json({ username: req.user!.username, role: req.user!.role, permissions: req.user!.permissions });
+  res.json({
+    username: req.user!.username,
+    role: req.user!.role,
+    permissions: req.user!.permissions,
+    sftpRootPath: req.user!.sftpRootPath,
+  });
 });
 
 export default router;

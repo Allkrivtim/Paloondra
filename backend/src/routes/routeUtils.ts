@@ -11,6 +11,26 @@ export function sendError(res: Response, err: unknown, fallback: string, status 
 }
 
 /**
+ * Thrown by assertWithinRoot() - routes that call it should map this to a
+ * 403, distinct from the generic 500 sendError() defaults to.
+ */
+export class ScopeViolationError extends Error {}
+
+/**
+ * Enforces a `user.sftpRootPath` restriction (see StoredUser) against an
+ * already-normalized absolute path. `root` of `null` means unrestricted -
+ * a no-op. `target` must already be normalized (via path.posix.normalize)
+ * the same way `root` was when it was stored, so this is a plain string
+ * comparison, not a filesystem operation.
+ */
+export function assertWithinRoot(root: string | null, target: string): void {
+  if (!root) return;
+  if (target !== root && !target.startsWith(root + '/')) {
+    throw new ScopeViolationError(`That path is outside your permitted directory (${root})`);
+  }
+}
+
+/**
  * Validates that `filename` is a bare filename (no path separators, no
  * "." / ".."), then joins it under `dir`. Every route that takes a
  * client-supplied filename for a fixed server-side directory (plugins,
