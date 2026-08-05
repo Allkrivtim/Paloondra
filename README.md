@@ -1137,6 +1137,45 @@ against too, so fixing it here covers both.
 If the Minecraft server runs on a *different* machine, use its real
 reachable address instead — that case needs no special handling.
 
+**If the Minecraft server is itself a Docker container** (its own compose
+project, e.g. an `itzg/minecraft-server` setup), neither `172.17.0.1` (the
+default bridge gateway) nor `host.docker.internal` is the right answer —
+both route to the Docker *host*, and unless that server's RCON/extension
+ports are actually published to the host, there's nothing listening there
+from the backend container's point of view (this typically shows up as
+`connect ETIMEDOUT`, not `ECONNREFUSED`, if a host firewall is also
+dropping the traffic). The reliable fix is to join `backend` to that
+other project's network and address it by **container name** instead —
+Docker's built-in DNS resolves it for any container sharing the network,
+without needing published ports at all. Add an external network to
+`docker-compose.yml`:
+
+```yaml
+services:
+  backend:
+    networks:
+      - paloondra
+      - minecraft   # add this
+
+networks:
+  paloondra:
+    driver: bridge
+  minecraft:
+    external: true
+    name: <other-project-name>_default   # Compose's default network name for that project
+```
+
+Then point at the container by name, not an IP:
+
+```
+RCON_HOST=minecraft-server   # whatever `docker ps` calls that container
+LUCKPERMS_API_URL=http://minecraft-server:8080
+```
+
+Find the exact name/network with `docker network inspect <network-name>`
+(lists every container on it) if you're not sure what the other project
+calls its own containers.
+
 ### 3. Set `VITE_API_BASE_URL` to how you'll reach the panel
 
 In the root `.env`, set `VITE_API_BASE_URL` to the URL you'll actually
@@ -1452,6 +1491,20 @@ If the Minecraft server is on the same physical machine as Docker, set
 (see [Docker](#docker), step 2) and `docker compose restart backend`. This
 affects the start/stop/restart/backup scripts too, since they run over the
 same SSH connection.
+
+**Docker: RCON (or `LUCKPERMS_API_URL`) shows "connect ETIMEDOUT 172.17.0.1:..."**
+`172.17.0.1` is the default `docker0` bridge gateway - the backend
+container is trying to reach the Docker *host* on that port and getting no
+response at all (as opposed to `ECONNREFUSED`, which means something
+answered and said no). If the Minecraft server also runs in Docker, this
+usually means `RCON_HOST`/`LUCKPERMS_API_URL` still point at the host
+gateway instead of the Minecraft container - see "If the Minecraft server
+is itself a Docker container" under [Docker](#docker), step 2: join
+`backend` to that container's network and address it by container name
+instead. If the Minecraft server genuinely runs on the host (not in
+Docker), `ETIMEDOUT` there instead points at a host firewall dropping
+traffic from the bridge subnet (`172.17.0.0/16`) to the RCON/extension
+port - check `sudo iptables -L -n` / `ufw status` on the Docker host.
 
 **Plugins/Backups/Server Config tab shows "not configured"**
 `PLUGINS_DIR` / `BACKUPS_DIR` / `SERVER_ROOT_DIR` is unset in
