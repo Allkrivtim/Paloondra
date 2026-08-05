@@ -39,6 +39,11 @@ export function looksLikeTextFile(name: string): boolean {
   return TEXT_EXTENSIONS.has(ext);
 }
 
+/** Strictly ".md" - the FileEditor's Read/Edit toggle only applies to these, not every extension monacoLanguageFor happens to map to "markdown". */
+export function isMarkdownFile(name: string): boolean {
+  return name.toLowerCase().endsWith('.md');
+}
+
 export function monacoLanguageFor(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase();
   switch (ext) {

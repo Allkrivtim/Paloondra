@@ -175,7 +175,9 @@
     "saving": "Saving...",
     "close": "Close",
     "failedToSave": "Failed to save file",
-    "fileSaved": "File saved"
+    "fileSaved": "File saved",
+    "readMode": "Read",
+    "editMode": "Text Edit"
   },
   "plugins": {
     "tabInstalled": "Installed",

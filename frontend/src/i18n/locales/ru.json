@@ -177,7 +177,9 @@
     "saving": "Сохранение...",
     "close": "Закрыть",
     "failedToSave": "Не удалось сохранить файл",
-    "fileSaved": "Файл сохранён"
+    "fileSaved": "Файл сохранён",
+    "readMode": "Чтение",
+    "editMode": "Правка текста"
   },
   "plugins": {
     "tabInstalled": "Установленные",

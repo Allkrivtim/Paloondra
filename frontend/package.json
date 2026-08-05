@@ -13,9 +13,11 @@
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
     "axios": "^1.7.2",
+    "dompurify": "^3.4.13",
     "i18next": "^26.3.4",
     "i18next-browser-languagedetector": "^8.2.1",
     "js-yaml": "^5.2.1",
+    "marked": "^18.0.9",
     "monaco-editor": "^0.55.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -25,6 +27,7 @@
     "recharts": "^2.12.7"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
@@ -35,6 +38,6 @@
     "vite": "^5.3.1"
   },
   "overrides": {
-    "dompurify": "^3.4.11"
+    "dompurify": "^3.4.13"
   }
 }
