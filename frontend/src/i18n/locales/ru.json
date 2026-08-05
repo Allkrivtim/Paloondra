@@ -974,6 +974,23 @@
     "demotedToast": "«{{username}}» понижен",
     "failedToPromote": "Не удалось повысить пользователя",
     "failedToDemote": "Не удалось понизить пользователя",
-    "save": "Сохранить"
+    "save": "Сохранить",
+    "searchTitle": "Поиск",
+    "searchHint": "Найти всех пользователей или группы, у которых есть право, родитель, префикс/суффикс, мета-ключ, вес или отображаемое имя, начинающееся с заданного текста - обратная операция по отношению к просмотру списка одной записи.",
+    "searchQueryPlaceholder": "напр. minecraft.command или essentials.",
+    "searchTypeAny": "Любой тип",
+    "searchFailed": "Не удалось выполнить поиск",
+    "searchNoResults": "Ничего не найдено.",
+    "searchUsersHeading": "Пользователи ({{count}})",
+    "searchGroupsHeading": "Группы ({{count}})",
+    "searchType": {
+      "inheritance": "Родитель (группа)",
+      "prefix": "Префикс",
+      "suffix": "Суффикс",
+      "meta": "Мета",
+      "weight": "Вес",
+      "display_name": "Отображаемое имя",
+      "regex_permission": "Regex-право"
+    }
   }
 }

@@ -15,7 +15,8 @@ type SubTab = 'permissions' | 'parents' | 'chatmeta' | 'meta';
 
 interface Props {
   uniqueId: string;
-  username: string;
+  /** Optional - a search result only carries a uniqueId (see SearchPanel); the real username comes from GET /user/:uniqueId once it loads. */
+  username?: string;
   allGroupNames: string[];
   allTrackNames: string[];
 }
@@ -60,7 +61,11 @@ export default function UserPanel({ uniqueId, username, allGroupNames, allTrackN
     try {
       const updated = direction === 'promote' ? await promoteUser(uniqueId, selectedTrack) : await demoteUser(uniqueId, selectedTrack);
       setUser(updated);
-      toast.success(direction === 'promote' ? t('luckperms.promotedToast', { username }) : t('luckperms.demotedToast', { username }));
+      toast.success(
+        direction === 'promote'
+          ? t('luckperms.promotedToast', { username: updated.username ?? username ?? uniqueId })
+          : t('luckperms.demotedToast', { username: updated.username ?? username ?? uniqueId }),
+      );
     } catch (err) {
       toast.error(getErrorMessage(err, direction === 'promote' ? t('luckperms.failedToPromote') : t('luckperms.failedToDemote')));
     } finally {
@@ -79,6 +84,11 @@ export default function UserPanel({ uniqueId, username, allGroupNames, allTrackN
     return <p className="p-4 text-sm text-panel-danger">{loadError}</p>;
   }
 
+  // The real username, once known - always available by this point (the
+  // load above succeeded), the `username` prop is only a fallback for
+  // whatever brief moment it isn't.
+  const displayName = user.username ?? username ?? uniqueId;
+
   const TABS: { key: SubTab; label: string }[] = [
     { key: 'permissions', label: t('luckperms.tabPermissions') },
     { key: 'parents', label: t('luckperms.tabParents') },
@@ -89,7 +99,7 @@ export default function UserPanel({ uniqueId, username, allGroupNames, allTrackN
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="font-mono text-lg font-semibold text-panel-text">{user.username ?? username}</h2>
+        <h2 className="font-mono text-lg font-semibold text-panel-text">{displayName}</h2>
         <p className="font-mono text-xs text-panel-muted">{user.uniqueId}</p>
         {user.metadata.primaryGroup && (
           <p className="mt-1 text-xs text-panel-muted">

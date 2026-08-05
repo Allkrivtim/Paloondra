@@ -866,6 +866,19 @@ a new one, rather than an in-place edit.
   what a player actually ends up with once inheritance is accounted for,
   without hunting through parent groups by hand.
 
+### Search: who has this permission?
+
+Every group/user panel answers "what does *this one* have" - the **Search**
+entry in the sidebar answers the reverse: "who (across every user *and*
+group) has something matching this prefix". Uses the REST API's own
+`GET /user/search`/`GET /group/search`, not a client-side scan, so it's
+accurate and fast regardless of how many users/groups exist. Search by a
+key prefix (e.g. `essentials.` finds every permission starting with that),
+optionally narrowed to one node type (parent/prefix/suffix/meta/weight/
+display name - permission nodes are always included unless a type filter
+is set, since "permission" isn't a separate type to filter by). Click any
+result to jump straight to that user's or group's full panel.
+
 ### What's different from the official web editor
 
 - **Changes apply immediately**, not via LuckPerms' paste-and-apply-code
