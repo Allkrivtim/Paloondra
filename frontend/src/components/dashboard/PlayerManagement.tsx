@@ -9,6 +9,8 @@ import Spinner from '../common/Spinner';
 
 interface Props {
   players: PlayersInfo | null;
+  /** True when the current user lacks the `serverControl` permission - these actions all route through RCON, same as the Dashboard's start/stop/restart buttons. */
+  disabled?: boolean;
 }
 
 type Action = 'kick' | 'ban' | 'op' | 'whitelist';
@@ -20,7 +22,7 @@ const ACTION_COMMAND: Record<Action, (name: string) => string> = {
   whitelist: (name) => `whitelist add ${name}`,
 };
 
-export default function PlayerManagement({ players }: Props) {
+export default function PlayerManagement({ players, disabled }: Props) {
   const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
@@ -69,14 +71,14 @@ export default function PlayerManagement({ players }: Props) {
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-panel-surface2 px-3 py-2"
             >
               <span className="text-sm text-panel-text">{name}</span>
-              <div className="flex gap-1.5 text-xs">
+              <div className="flex gap-1.5 text-xs" title={disabled ? t('players.noPermission') : undefined}>
                 {(['kick', 'ban', 'op', 'whitelist'] as Action[]).map((action) => {
                   const isBusy = busy === `${name}:${action}`;
                   return (
                     <button
                       key={action}
                       onClick={() => runAction(name, action)}
-                      disabled={busy !== null}
+                      disabled={busy !== null || disabled}
                       className={`flex items-center gap-1 rounded-md border border-panel-border px-2 py-1 transition hover:border-panel-accent hover:text-panel-accent disabled:opacity-50 ${
                         action === 'ban' ? 'hover:border-panel-danger hover:text-panel-danger' : ''
                       }`}

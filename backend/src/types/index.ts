@@ -158,12 +158,49 @@ export interface OpEntry {
 
 export type UserRole = 'admin' | 'user';
 
+/**
+ * Granular per-feature access, checked only for role: 'user' accounts -
+ * admins always bypass this (see requireAdmin/requirePermission). Each key
+ * roughly maps to one nav tab, except `serverControl`, which has no tab of
+ * its own: it gates the start/stop/restart buttons on the Dashboard plus
+ * the RCON-backed quick actions (kick/ban/op/whitelist-add/broadcast)
+ * embedded in it.
+ */
+export const PERMISSION_KEYS = [
+  'console',
+  'ssh',
+  'sftp',
+  'plugins',
+  'backups',
+  'scheduler',
+  'serverConfig',
+  'whitelist',
+  'ops',
+  'motd',
+  'serverControl',
+] as const;
+
+export type PermissionKey = (typeof PERMISSION_KEYS)[number];
+
+export const ALL_PERMISSIONS: PermissionKey[] = [...PERMISSION_KEYS];
+
+export function isValidPermissionKey(value: string): value is PermissionKey {
+  return (PERMISSION_KEYS as readonly string[]).includes(value);
+}
+
 /** Persisted shape, including the bcrypt hash - never sent to the frontend as-is, see PublicUser. */
 export interface StoredUser {
   id: string;
   username: string;
   passwordHash: string;
   role: UserRole;
+  /**
+   * Always fully populated, even for admins (who get ALL_PERMISSIONS but
+   * have the check bypassed entirely) - this way demoting an admin to
+   * 'user' naturally preserves full access instead of silently locking
+   * them out, with no special-case migration needed.
+   */
+  permissions: PermissionKey[];
   createdAt: number;
 }
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { fileManagerService } from '../services/fileManager.service';
 import { parseProperties, applyProperties } from '../services/propertiesFile';
 import { auditLogService } from '../services/auditLog.service';
@@ -8,6 +8,7 @@ import { sendError, requireServerPropertiesPath } from './routeUtils';
 const router = Router();
 
 router.use(requireAuth);
+router.use(requirePermission('serverConfig'));
 
 const MAX_SIZE = 1024 * 1024; // server.properties is always tiny; 1 MiB is generous
 

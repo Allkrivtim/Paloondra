@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { rconService } from '../services/rcon.service';
 import { auditLogService } from '../services/auditLog.service';
 import { sendError } from './routeUtils';
@@ -7,6 +7,7 @@ import { sendError } from './routeUtils';
 const router = Router();
 
 router.use(requireAuth);
+router.use(requirePermission('serverControl'));
 
 // A single generic "run this RCON command" endpoint, separate from the
 // RCON console's own WebSocket channel (ws/rconSocket.ts). This is the one

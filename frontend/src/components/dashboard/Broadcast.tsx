@@ -5,7 +5,12 @@ import { getErrorMessage } from '../../api/errors';
 import { useToast } from '../../context/ToastContext';
 import Spinner from '../common/Spinner';
 
-export default function Broadcast() {
+interface Props {
+  /** True when the current user lacks the `serverControl` permission - broadcast routes through RCON, same as start/stop/restart. */
+  disabled?: boolean;
+}
+
+export default function Broadcast({ disabled }: Props) {
   const { t } = useTranslation();
   const toast = useToast();
   const [message, setMessage] = useState('');
@@ -30,16 +35,17 @@ export default function Broadcast() {
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-panel-border bg-panel-surface p-4">
       <h2 className="mb-3 text-sm font-semibold text-panel-text">{t('broadcast.title')}</h2>
-      <div className="flex gap-2">
+      <div className="flex gap-2" title={disabled ? t('broadcast.noPermission') : undefined}>
         <input
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder={t('broadcast.placeholder')}
-          className="flex-1 rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 text-sm text-panel-text outline-none focus:border-panel-accent"
+          disabled={disabled}
+          className="flex-1 rounded-lg border border-panel-border bg-panel-surface2 px-3 py-2 text-sm text-panel-text outline-none focus:border-panel-accent disabled:opacity-50"
         />
         <button
           type="submit"
-          disabled={sending || !message.trim()}
+          disabled={sending || !message.trim() || disabled}
           className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-panel-accent2 px-4 py-2 text-sm font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
         >
           {sending && <Spinner className="h-3.5 w-3.5 text-black" />}

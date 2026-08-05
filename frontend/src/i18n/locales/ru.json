@@ -83,7 +83,8 @@
     "chartRam": "RAM",
     "chartDisk": "Диск",
     "liveOutput": "Вывод сервера в реальном времени",
-    "noOutputYet": "Пока нет вывода."
+    "noOutputYet": "Пока нет вывода.",
+    "noServerControlPermission": "У вас нет прав на управление сервером"
   },
   "players": {
     "title": "Игроки онлайн",
@@ -95,14 +96,16 @@
     "confirmTitle": "{{action}} игрока {{player}}?",
     "banExtraMessage": "Это также удалит игрока с сервера.",
     "actionSentFallback": "Команда для {{player}} отправлена",
-    "failedToRunAction": "Не удалось выполнить действие для {{player}}"
+    "failedToRunAction": "Не удалось выполнить действие для {{player}}",
+    "noPermission": "У вас нет прав на управление сервером"
   },
   "broadcast": {
     "title": "Объявление",
     "placeholder": "Сообщение для всех игроков...",
     "send": "Отправить",
     "sent": "Объявление отправлено",
-    "failedToSend": "Не удалось отправить объявление"
+    "failedToSend": "Не удалось отправить объявление",
+    "noPermission": "У вас нет прав на управление сервером"
   },
   "auditLog": {
     "title": "Недавние действия",
@@ -699,7 +702,28 @@
     "failedToAdd": "Не удалось добавить пользователя",
     "failedToRemove": "Не удалось удалить пользователя",
     "failedToChangeRole": "Не удалось изменить роль",
-    "failedToResetPassword": "Не удалось сбросить пароль"
+    "failedToResetPassword": "Не удалось сбросить пароль",
+    "permission": {
+      "console": "Консоль",
+      "ssh": "SSH-терминал",
+      "sftp": "Файловый менеджер",
+      "plugins": "Плагины и моды",
+      "backups": "Резервные копии",
+      "scheduler": "Задачи по расписанию",
+      "serverConfig": "Настройки сервера",
+      "whitelist": "Вайтлист",
+      "ops": "Операторы",
+      "motd": "MOTD",
+      "serverControl": "Управление сервером (старт/стоп/рестарт, кик/бан/оп, объявления)"
+    },
+    "permissionsLabel": "Права доступа",
+    "columnPermissions": "Права доступа",
+    "fullAccess": "Полный доступ",
+    "permissionsCount": "{{count}}/{{total}}",
+    "savePermissions": "Сохранить",
+    "cancel": "Отмена",
+    "permissionsChangedToast": "Права доступа «{{name}}» обновлены",
+    "failedToChangePermissions": "Не удалось обновить права доступа"
   },
   "motd": {
     "title": "MOTD (BetterMOTD)",

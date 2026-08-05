@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthedRequest, requireAuth } from '../auth/middleware';
+import { AuthedRequest, requireAuth, requirePermission } from '../auth/middleware';
 import { scriptsService } from '../services/scripts.service';
 import { rconService } from '../services/rcon.service';
 import { auditLogService } from '../services/auditLog.service';
@@ -10,7 +10,10 @@ const VALID_ACTIONS: ScriptName[] = ['start', 'stop', 'restart', 'backup'];
 
 router.use(requireAuth);
 
-router.post('/:action', async (req: AuthedRequest, res) => {
+// Gated per-route, not via router.use(): GET /status below is read-only
+// monitoring and stays available to every authenticated user, same as
+// metrics/audit-log.
+router.post('/:action', requirePermission('serverControl'), async (req: AuthedRequest, res) => {
   const action = req.params.action as ScriptName;
   if (!VALID_ACTIONS.includes(action)) {
     return res.status(400).json({ error: `Unknown action "${action}"` });

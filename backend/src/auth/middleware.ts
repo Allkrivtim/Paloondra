@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from './auth';
 import { usersService } from '../services/users.service';
-import { UserRole } from '../types';
+import { PermissionKey, UserRole } from '../types';
 
 export interface AuthedRequest extends Request {
-  user?: { username: string; role: UserRole };
+  user?: { username: string; role: UserRole; permissions: PermissionKey[] };
 }
 
 /**
@@ -30,7 +30,7 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
       res.status(401).json({ error: 'Invalid or expired token' });
       return;
     }
-    req.user = { username: user.username, role: user.role };
+    req.user = { username: user.username, role: user.role, permissions: user.permissions };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
@@ -44,4 +44,19 @@ export function requireAdmin(req: AuthedRequest, res: Response, next: NextFuncti
     return;
   }
   next();
+}
+
+/**
+ * Chain after requireAuth on any route that should be restricted by a
+ * granular permission key. Admins always bypass this check - permissions
+ * are only ever meaningful for role: 'user' accounts (see StoredUser).
+ */
+export function requirePermission(key: PermissionKey) {
+  return (req: AuthedRequest, res: Response, next: NextFunction): void => {
+    if (req.user?.role === 'admin' || req.user?.permissions.includes(key)) {
+      next();
+      return;
+    }
+    res.status(403).json({ error: 'You do not have permission to access this feature' });
+  };
 }

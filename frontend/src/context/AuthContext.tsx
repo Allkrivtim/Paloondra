@@ -1,12 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { api, clearToken, getToken, setToken } from '../api/client';
-import { UserRole } from '../types';
+import { PermissionKey, UserRole } from '../types';
 
 interface AuthContextValue {
   username: string | null;
   role: UserRole | null;
+  permissions: PermissionKey[];
   /** Convenience for `role === 'admin'` - gates the Users tab and its nav entry. */
   isAdmin: boolean;
+  /** True for admins regardless of `permissions` (always bypassed), or when the key is present in `permissions`. */
+  hasPermission: (key: PermissionKey) => boolean;
   isAuthenticated: boolean;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
@@ -18,6 +21,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [username, setUsername] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
+  const [permissions, setPermissions] = useState<PermissionKey[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         setUsername(res.data.username);
         setRole(res.data.role);
+        setPermissions(res.data.permissions ?? []);
       })
       .catch(() => clearToken())
       .finally(() => setLoading(false));
@@ -41,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(res.data.token);
     setUsername(res.data.username);
     setRole(res.data.role);
+    setPermissions(res.data.permissions ?? []);
   }, []);
 
   const logout = useCallback(() => {
@@ -48,11 +54,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearToken();
     setUsername(null);
     setRole(null);
+    setPermissions([]);
   }, []);
 
+  const isAdmin = role === 'admin';
+  const hasPermission = useCallback(
+    (key: PermissionKey) => isAdmin || permissions.includes(key),
+    [isAdmin, permissions],
+  );
+
   const value = useMemo(
-    () => ({ username, role, isAdmin: role === 'admin', isAuthenticated: !!username, loading, login, logout }),
-    [username, role, loading, login, logout],
+    () => ({
+      username,
+      role,
+      permissions,
+      isAdmin,
+      hasPermission,
+      isAuthenticated: !!username,
+      loading,
+      login,
+      logout,
+    }),
+    [username, role, permissions, isAdmin, hasPermission, loading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

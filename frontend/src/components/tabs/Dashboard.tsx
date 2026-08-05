@@ -14,6 +14,7 @@ import { getErrorMessage } from '../../api/errors';
 import { useSocket } from '../../hooks/useSocket';
 import { useToast } from '../../context/ToastContext';
 import { useDialog } from '../../context/DialogContext';
+import { useAuth } from '../../context/AuthContext';
 import { ConsoleLine, MetricsSample, ScriptName, ServerStatus } from '../../types';
 import StatCard from '../common/StatCard';
 import Spinner from '../common/Spinner';
@@ -31,6 +32,8 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const toast = useToast();
   const dialog = useDialog();
+  const { hasPermission } = useAuth();
+  const canControl = hasPermission('serverControl');
   const [status, setStatus] = useState<ServerStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [samples, setSamples] = useState<MetricsSample[]>([]);
@@ -132,24 +135,24 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2" title={canControl ? undefined : t('dashboard.noServerControlPermission')}>
           <button
             onClick={() => runAction('start')}
-            disabled={busyAction !== null}
+            disabled={busyAction !== null || !canControl}
             className="rounded-lg bg-panel-accent2 px-4 py-2 text-sm font-medium text-black transition hover:bg-panel-accent disabled:opacity-50"
           >
             {busyAction === 'start' ? t('dashboard.starting') : t('dashboard.start')}
           </button>
           <button
             onClick={() => runAction('restart')}
-            disabled={busyAction !== null}
+            disabled={busyAction !== null || !canControl}
             className="rounded-lg border border-panel-warn text-panel-warn px-4 py-2 text-sm font-medium transition hover:bg-panel-warn/10 disabled:opacity-50"
           >
             {busyAction === 'restart' ? t('dashboard.restarting') : t('dashboard.restart')}
           </button>
           <button
             onClick={() => runAction('stop')}
-            disabled={busyAction !== null}
+            disabled={busyAction !== null || !canControl}
             className="rounded-lg border border-panel-danger text-panel-danger px-4 py-2 text-sm font-medium transition hover:bg-panel-danger/10 disabled:opacity-50"
           >
             {busyAction === 'stop' ? t('dashboard.stopping') : t('dashboard.stop')}
@@ -208,8 +211,8 @@ export default function Dashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <PlayerManagement players={latest?.players ?? null} />
-        <Broadcast />
+        <PlayerManagement players={latest?.players ?? null} disabled={!canControl} />
+        <Broadcast disabled={!canControl} />
         <AuditLogPanel />
       </section>
 
