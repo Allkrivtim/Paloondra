@@ -191,6 +191,13 @@ export const env = {
   docker: {
     containerName: process.env.MC_CONTAINER?.trim() || undefined,
     consoleTailLines: optionalInt('CONSOLE_TAIL_LINES', 200, { min: 1 }),
+    // mc-send-to-console refuses to run as any user other than the one the
+    // Minecraft process itself runs as inside the container - `docker exec`
+    // defaults to root, which it rejects with "Exec needs to be run with
+    // user ID <n>". 1000 is the itzg/minecraft-server image's own default
+    // (its "minecraft" user); only override this if you've customized the
+    // image's UID.
+    consoleExecUser: optional('MC_CONSOLE_EXEC_USER', '1000'),
   },
 
   betterMotd: {

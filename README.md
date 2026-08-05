@@ -139,6 +139,7 @@ There is no separate config for the frontend beyond the API URL (see
 |---|---|---|
 | `MC_CONTAINER` | `mc` | Optional. Docker container name/id of the Minecraft server itself (the `itzg/minecraft-server` image), on the target host. Backs the [Console](#console) tab - unset means that tab shows a "not configured" message. |
 | `CONSOLE_TAIL_LINES` | `200` | How many historical log lines `docker logs -f --tail` fetches when the Console tab starts following - defaults to 200. |
+| `MC_CONSOLE_EXEC_USER` | `1000` | UID `mc-send-to-console` must run as inside the container - `docker exec` defaults to root, which it refuses. `1000` is the itzg/minecraft-server image's own default user; only change this if you've customized the image's UID. |
 
 ### SSH / SFTP
 
@@ -445,9 +446,9 @@ talks **directly to the Docker container over SSH, not RCON**:
   backend-side stream shared by every connected browser tab - it starts
   following on backend startup (if configured) and keeps a bounded
   in-memory history (1000 lines) so a newly-opened tab isn't empty.
-- **Input**: typed commands are sent with `docker exec MC_CONTAINER
-  mc-send-to-console -- <command>` - `mc-send-to-console` is the
-  itzg/minecraft-server image's own helper for writing directly to the
+- **Input**: typed commands are sent with `docker exec -u MC_CONSOLE_EXEC_USER
+  MC_CONTAINER mc-send-to-console -- <command>` - `mc-send-to-console` is
+  the itzg/minecraft-server image's own helper for writing directly to the
   server's console stdin. There's no RCON round-trip and nothing to
   correlate a response to - whatever the server prints in response shows
   up naturally in the same streamed log a moment later, exactly like
@@ -470,7 +471,14 @@ talks **directly to the Docker container over SSH, not RCON**:
   typically membership in the `docker` group, or equivalent access.
   Neither Docker Compose nor a `dockerode`/Docker API client is involved;
   it's the same "run a plain command over the existing SSH connection"
-  approach as everything else in this panel.
+  approach as everything else in this panel. **The Minecraft container
+  itself** (not this backend) also needs `CREATE_CONSOLE_IN_PIPE=true` set
+  in its own environment - `mc-send-to-console` writes into a named pipe
+  at `/tmp/minecraft-console-in` inside that container, and the
+  itzg/minecraft-server image only creates that pipe when this variable is
+  set. Without it, *reading* the console (`docker logs -f`) still works
+  fine, but *sending* commands fails with an error naming the missing
+  pipe - see [troubleshooting](#troubleshooting) below.
 - RCON is **not** used by this tab at all, and is otherwise completely
   unaffected - the Dashboard's quick actions, Whitelist, Ops, scheduled
   RCON tasks, and the MOTD tab's reload all keep working through RCON
@@ -1104,6 +1112,21 @@ unrelated to RCON; the Console tab talks to the Docker container directly.
 Check that `mc-send-to-console` exists inside the container (it ships with
 the `itzg/minecraft-server` image) - a failure here shows up as a system
 line directly in the console log, e.g. "Failed to send command: ...".
+
+**Console tab: "Failed to send command: ... Console pipe needs to be enabled by setting CREATE_CONSOLE_IN_PIPE to true" / "Named pipe /tmp/minecraft-console-in is missing"**
+The Minecraft container itself wasn't started with `CREATE_CONSOLE_IN_PIPE=true`
+(this is separate from anything in `backend/.env` - it's a setting on the
+Minecraft server's own container). Add `CREATE_CONSOLE_IN_PIPE: "true"` to
+that container's environment and restart it; *reading* the console keeps
+working the whole time, only *sending* commands needs this.
+
+**Console tab: "Failed to send command: ... Exec needs to be run with user ID 1000"**
+`mc-send-to-console` refuses to run as any user other than the one the
+Minecraft process itself runs as, and `docker exec` defaults to root
+without an explicit `-u`. Paloondra already passes `-u MC_CONSOLE_EXEC_USER`
+(default `1000`, the itzg/minecraft-server image's own default user) - if
+you see this error anyway, you've likely customized that image's UID; set
+`MC_CONSOLE_EXEC_USER` in `backend/.env` to match and restart the backend.
 
 **RCON commands fail with an auth-looking error**
 `RCON_PASSWORD` doesn't match `rcon.password` in `server.properties`, or
