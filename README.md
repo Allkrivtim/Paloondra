@@ -139,6 +139,7 @@ There is no separate config for the frontend beyond the API URL (see
 |---|---|---|
 | `MC_CONTAINER` | `mc` | Optional. Docker container name/id of the Minecraft server itself (the `itzg/minecraft-server` image), on the target host. Backs the [Console](#console) tab - unset means that tab shows a "not configured" message. |
 | `CONSOLE_TAIL_LINES` | `200` | How many historical log lines `docker logs -f --tail` fetches when the Console tab starts following - defaults to 200. |
+| `MC_CONSOLE_EXEC_USER` | `1000` | UID `mc-send-to-console` must run as inside the container - `docker exec` defaults to root, which it refuses. `1000` is the itzg/minecraft-server image's own default user; only change this if you've customized the image's UID. |
 
 ### SSH / SFTP
 
@@ -445,9 +446,9 @@ talks **directly to the Docker container over SSH, not RCON**:
   backend-side stream shared by every connected browser tab - it starts
   following on backend startup (if configured) and keeps a bounded
   in-memory history (1000 lines) so a newly-opened tab isn't empty.
-- **Input**: typed commands are sent with `docker exec MC_CONTAINER
-  mc-send-to-console -- <command>` - `mc-send-to-console` is the
-  itzg/minecraft-server image's own helper for writing directly to the
+- **Input**: typed commands are sent with `docker exec -u MC_CONSOLE_EXEC_USER
+  MC_CONTAINER mc-send-to-console -- <command>` - `mc-send-to-console` is
+  the itzg/minecraft-server image's own helper for writing directly to the
   server's console stdin. There's no RCON round-trip and nothing to
   correlate a response to - whatever the server prints in response shows
   up naturally in the same streamed log a moment later, exactly like
@@ -1118,6 +1119,14 @@ The Minecraft container itself wasn't started with `CREATE_CONSOLE_IN_PIPE=true`
 Minecraft server's own container). Add `CREATE_CONSOLE_IN_PIPE: "true"` to
 that container's environment and restart it; *reading* the console keeps
 working the whole time, only *sending* commands needs this.
+
+**Console tab: "Failed to send command: ... Exec needs to be run with user ID 1000"**
+`mc-send-to-console` refuses to run as any user other than the one the
+Minecraft process itself runs as, and `docker exec` defaults to root
+without an explicit `-u`. Paloondra already passes `-u MC_CONSOLE_EXEC_USER`
+(default `1000`, the itzg/minecraft-server image's own default user) - if
+you see this error anyway, you've likely customized that image's UID; set
+`MC_CONSOLE_EXEC_USER` in `backend/.env` to match and restart the backend.
 
 **RCON commands fail with an auth-looking error**
 `RCON_PASSWORD` doesn't match `rcon.password` in `server.properties`, or

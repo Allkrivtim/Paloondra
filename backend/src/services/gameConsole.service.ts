@@ -170,7 +170,11 @@ class GameConsoleService extends EventEmitter {
       return;
     }
 
-    const cmd = `docker exec ${shellEscape(container)} mc-send-to-console -- ${shellEscape(command)}`;
+    // -u matches the UID the Minecraft process itself runs as inside the
+    // container (see env.docker.consoleExecUser) - mc-send-to-console
+    // rejects being run as any other user, and `docker exec` defaults to
+    // root without this flag.
+    const cmd = `docker exec -u ${shellEscape(env.docker.consoleExecUser)} ${shellEscape(container)} mc-send-to-console -- ${shellEscape(command)}`;
     try {
       const { stdout, stderr, code } = await sshService.exec(cmd);
       if (code !== 0) {
