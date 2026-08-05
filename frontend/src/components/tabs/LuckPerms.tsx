@@ -7,6 +7,7 @@ import EntitySidebar, { Selection } from '../luckperms/EntitySidebar';
 import GroupPanel from '../luckperms/GroupPanel';
 import TrackPanel from '../luckperms/TrackPanel';
 import UserPanel from '../luckperms/UserPanel';
+import SearchPanel from '../luckperms/SearchPanel';
 import Spinner from '../common/Spinner';
 
 type HealthState = { configured: boolean; ok: boolean } | null;
@@ -153,6 +154,12 @@ export default function LuckPerms() {
             <span className="text-3xl">🔑</span>
             <p className="text-sm">{t('luckperms.emptySelectionHint')}</p>
           </div>
+        )}
+        {selected?.kind === 'search' && (
+          <SearchPanel
+            onSelectUser={(uniqueId) => setSelected({ kind: 'user', uniqueId })}
+            onSelectGroup={(name) => setSelected({ kind: 'group', name })}
+          />
         )}
         {selected?.kind === 'group' && <GroupPanel key={selected.name} name={selected.name} allGroupNames={groupNames} onDeleted={handleGroupDeleted} />}
         {selected?.kind === 'track' && <TrackPanel key={selected.name} name={selected.name} allGroupNames={groupNames} onDeleted={handleTrackDeleted} />}

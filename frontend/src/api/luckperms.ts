@@ -1,5 +1,15 @@
 import { api } from './client';
-import { LuckPermsContext, LuckPermsGroup, LuckPermsNewNode, LuckPermsPermissionCheckResult, LuckPermsTrack, LuckPermsUser } from '../types';
+import {
+  LuckPermsContext,
+  LuckPermsGroup,
+  LuckPermsGroupSearchResult,
+  LuckPermsNewNode,
+  LuckPermsPermissionCheckResult,
+  LuckPermsSearchParams,
+  LuckPermsTrack,
+  LuckPermsUser,
+  LuckPermsUserSearchResult,
+} from '../types';
 
 export async function getHealth(): Promise<{ configured: boolean; ok: boolean }> {
   const res = await api.get('/luckperms/health');
@@ -11,6 +21,12 @@ export async function getHealth(): Promise<{ configured: boolean; ok: boolean }>
 export async function lookupUser(params: { username?: string; uniqueId?: string }): Promise<{ uniqueId: string; username: string } | null> {
   const res = await api.get('/luckperms/users/lookup', { params });
   return res.data.user;
+}
+
+/** "Who has this permission/parent/prefix/...?" across every known user - the REST API's own search, not a client-side scan. */
+export async function searchUsers(params: LuckPermsSearchParams): Promise<LuckPermsUserSearchResult[]> {
+  const res = await api.get('/luckperms/users/search', { params });
+  return res.data.results;
 }
 
 export async function getUser(uniqueId: string): Promise<LuckPermsUser> {
@@ -48,6 +64,11 @@ export async function checkUserPermission(uniqueId: string, key: string, context
 export async function listGroups(): Promise<string[]> {
   const res = await api.get('/luckperms/groups');
   return res.data.groups;
+}
+
+export async function searchGroups(params: LuckPermsSearchParams): Promise<LuckPermsGroupSearchResult[]> {
+  const res = await api.get('/luckperms/groups/search', { params });
+  return res.data.results;
 }
 
 export async function createGroup(name: string): Promise<LuckPermsGroup> {

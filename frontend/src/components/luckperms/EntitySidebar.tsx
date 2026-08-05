@@ -5,7 +5,14 @@ import { getErrorMessage } from '../../api/errors';
 import { useDialog } from '../../context/DialogContext';
 import Spinner from '../common/Spinner';
 
-export type Selection = { kind: 'group'; name: string } | { kind: 'track'; name: string } | { kind: 'user'; uniqueId: string; username: string };
+export type Selection =
+  | { kind: 'group'; name: string }
+  | { kind: 'track'; name: string }
+  // username is optional - a search result only carries a uniqueId (see
+  // SearchPanel), UserPanel resolves the real username itself once
+  // GET /user/:uniqueId loads.
+  | { kind: 'user'; uniqueId: string; username?: string }
+  | { kind: 'search' };
 
 interface Props {
   groupNames: string[];
@@ -61,6 +68,15 @@ export default function EntitySidebar({ groupNames, trackNames, selected, onSele
 
   return (
     <div className="flex w-64 shrink-0 flex-col gap-4 overflow-y-auto">
+      <button
+        onClick={() => onSelect({ kind: 'search' })}
+        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium transition ${
+          selected?.kind === 'search' ? 'bg-panel-accent2/20 text-panel-accent' : 'text-panel-text hover:bg-panel-surface2'
+        }`}
+      >
+        🔍 {t('luckperms.searchTitle')}
+      </button>
+
       <section>
         <div className="mb-1.5 flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-panel-muted">{t('luckperms.groups')}</h3>

@@ -96,3 +96,22 @@ export function formatExpiry(expiry: number | undefined): string | null {
 export function isExpired(expiry: number | undefined): boolean {
   return !!expiry && expiry * 1000 < Date.now();
 }
+
+/** Human-readable label for any node, regardless of type - used by the search results view, where nodes from every category can appear side by side. Mirrors how each individual panel (Permissions/Parents/ChatMeta/Meta) already labels its own rows. */
+export function describeNode(node: LuckPermsNode): string {
+  switch (node.type) {
+    case 'inheritance':
+      return parseInheritanceKey(node.key) ?? node.key;
+    case 'prefix':
+    case 'suffix': {
+      const parsed = parsePrefixSuffixKey(node.key);
+      return parsed ? `[${node.type} ${parsed.priority}] ${parsed.text}` : node.key;
+    }
+    case 'meta': {
+      const parsed = parseMetaKey(node.key);
+      return parsed ? `${parsed.metaKey} = ${parsed.metaValue}` : node.key;
+    }
+    default:
+      return node.key;
+  }
+}

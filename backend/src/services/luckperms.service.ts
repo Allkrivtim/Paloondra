@@ -1,5 +1,16 @@
 import { env } from '../config/env';
-import { LuckPermsContext, LuckPermsGroup, LuckPermsNewNode, LuckPermsNode, LuckPermsPermissionCheckResult, LuckPermsTrack, LuckPermsUser } from '../types';
+import {
+  LuckPermsContext,
+  LuckPermsGroup,
+  LuckPermsGroupSearchResult,
+  LuckPermsNewNode,
+  LuckPermsNode,
+  LuckPermsPermissionCheckResult,
+  LuckPermsSearchParams,
+  LuckPermsTrack,
+  LuckPermsUser,
+  LuckPermsUserSearchResult,
+} from '../types';
 
 export class LuckPermsApiError extends Error {
   status?: number;
@@ -120,6 +131,11 @@ class LuckPermsService {
     return lpFetch(`/user/${encodeURIComponent(uniqueId)}`);
   }
 
+  /** "Who has this permission/parent/prefix/...?" across every known user - the REST API's own search, not a client-side scan. */
+  async searchUsers(params: LuckPermsSearchParams): Promise<LuckPermsUserSearchResult[]> {
+    return lpFetch(`/user/search${qs({ ...params })}`);
+  }
+
   async getUserNodes(uniqueId: string): Promise<LuckPermsNode[]> {
     return lpFetch(`/user/${encodeURIComponent(uniqueId)}/nodes`);
   }
@@ -150,6 +166,11 @@ class LuckPermsService {
 
   async listGroups(): Promise<string[]> {
     return lpFetch('/group');
+  }
+
+  /** Same idea as searchUsers(), across groups instead. */
+  async searchGroups(params: LuckPermsSearchParams): Promise<LuckPermsGroupSearchResult[]> {
+    return lpFetch(`/group/search${qs({ ...params })}`);
   }
 
   async getGroup(name: string): Promise<LuckPermsGroup> {

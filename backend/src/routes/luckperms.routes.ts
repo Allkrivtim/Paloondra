@@ -4,16 +4,25 @@ import { luckPermsService, LuckPermsApiError } from '../services/luckperms.servi
 import { auditLogService } from '../services/auditLog.service';
 import { env } from '../config/env';
 import { sendError } from './routeUtils';
-import { LuckPermsContext, LuckPermsNewNode } from '../types';
+import { LuckPermsContext, LuckPermsNewNode, LuckPermsSearchParams, LuckPermsSearchNodeType } from '../types';
+
+const SEARCH_NODE_TYPES: LuckPermsSearchNodeType[] = ['regex_permission', 'inheritance', 'prefix', 'suffix', 'meta', 'weight', 'display_name'];
 
 const router = Router();
 
 router.use(requireAuth);
 router.use(requirePermission('luckperms'));
 
-/** LuckPermsApiError carries a real HTTP status from the upstream API (401/403/404/etc.) - pass it through instead of always 500. */
+/**
+ * LuckPermsApiError carries a real HTTP status from the upstream API
+ * (401/403/404/etc.) - pass it through. Every non-LuckPermsApiError thrown
+ * inside these routes' try blocks comes from this file's own request
+ * parsing (parseNode/parseContext/parseNodeArray/parseSearchParams), which
+ * only ever throw for bad client input - not a 500-worthy server fault, so
+ * it's reported as 400.
+ */
 function handleError(res: Parameters<typeof sendError>[0], err: unknown, fallback: string): void {
-  sendError(res, err, fallback, err instanceof LuckPermsApiError ? (err.status ?? 502) : 500);
+  sendError(res, err, fallback, err instanceof LuckPermsApiError ? (err.status ?? 502) : 400);
 }
 
 function parseContext(value: unknown): LuckPermsContext[] | undefined {
@@ -51,6 +60,18 @@ function parseNodeArray(body: unknown): LuckPermsNewNode[] {
   return body.map(parseNode);
 }
 
+/** Shared by GET /users/search and GET /groups/search - the REST API itself requires exactly one of key/keyStartsWith. */
+function parseSearchParams(query: Record<string, unknown>): LuckPermsSearchParams {
+  const key = typeof query.key === 'string' ? query.key : undefined;
+  const keyStartsWith = typeof query.keyStartsWith === 'string' ? query.keyStartsWith : undefined;
+  if (!key && !keyStartsWith) {
+    throw new Error('key or keyStartsWith is required');
+  }
+  const type = typeof query.type === 'string' && (SEARCH_NODE_TYPES as string[]).includes(query.type) ? (query.type as LuckPermsSearchNodeType) : undefined;
+  const metaKey = typeof query.metaKey === 'string' ? query.metaKey : undefined;
+  return { key, keyStartsWith, type, metaKey };
+}
+
 // Lets the frontend distinguish "not configured" (show a clear setup
 // message, like the Console/Plugins tabs do) from "configured but the
 // extension is unreachable/unhealthy" (a real connection problem).
@@ -60,6 +81,18 @@ router.get('/health', async (_req, res) => {
 });
 
 // --- Users -------------------------------------------------------------
+
+// Must come before /users/:uniqueId - Express matches routes in
+// registration order, and :uniqueId would otherwise swallow "search" as
+// if it were an id.
+router.get('/users/search', async (req, res) => {
+  try {
+    const params = parseSearchParams(req.query as Record<string, unknown>);
+    res.json({ results: await luckPermsService.searchUsers(params) });
+  } catch (err) {
+    handleError(res, err, 'Search failed');
+  }
+});
 
 router.get('/users/lookup', async (req, res) => {
   try {
@@ -178,6 +211,16 @@ router.post('/groups', async (req: AuthedRequest, res) => {
     res.json(await luckPermsService.getGroup(name.trim()));
   } catch (err) {
     handleError(res, err, 'Failed to create group');
+  }
+});
+
+// Must come before /groups/:name, same reason as /users/search above.
+router.get('/groups/search', async (req, res) => {
+  try {
+    const params = parseSearchParams(req.query as Record<string, unknown>);
+    res.json({ results: await luckPermsService.searchGroups(params) });
+  } catch (err) {
+    handleError(res, err, 'Search failed');
   }
 });
 

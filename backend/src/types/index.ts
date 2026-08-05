@@ -301,3 +301,31 @@ export interface LuckPermsPermissionCheckResult {
   result: 'true' | 'false' | 'undefined';
   node?: LuckPermsNode;
 }
+
+/**
+ * The `type` filter for GET /user/search and /group/search deliberately
+ * excludes plain "permission" - it's the REST API's own enum, not an
+ * omission here. Search with no `type` at all still matches permission
+ * nodes (and everything else) by key/keyStartsWith; `type` only narrows
+ * to one of the structured kinds below.
+ */
+export type LuckPermsSearchNodeType = Exclude<LuckPermsNodeType, 'permission'>;
+
+export interface LuckPermsSearchParams {
+  /** Exactly one of key/keyStartsWith is required by the REST API - not both. */
+  key?: string;
+  keyStartsWith?: string;
+  metaKey?: string;
+  type?: LuckPermsSearchNodeType;
+}
+
+/** Search results carry only the matched node(s), not the full user/group record - see LuckPermsUser/LuckPermsGroup for that. */
+export interface LuckPermsUserSearchResult {
+  uniqueId: string;
+  results: LuckPermsNode[];
+}
+
+export interface LuckPermsGroupSearchResult {
+  name: string;
+  results: LuckPermsNode[];
+}

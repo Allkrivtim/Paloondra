@@ -972,6 +972,23 @@
     "demotedToast": "Demoted \"{{username}}\"",
     "failedToPromote": "Failed to promote user",
     "failedToDemote": "Failed to demote user",
-    "save": "Save"
+    "save": "Save",
+    "searchTitle": "Search",
+    "searchHint": "Find every user or group that has a permission, parent, prefix/suffix, meta key, weight, or display name matching a prefix - the reverse of browsing one entity's own list.",
+    "searchQueryPlaceholder": "e.g. minecraft.command or essentials.",
+    "searchTypeAny": "Any type",
+    "searchFailed": "Search failed",
+    "searchNoResults": "Nothing matched.",
+    "searchUsersHeading": "Users ({{count}})",
+    "searchGroupsHeading": "Groups ({{count}})",
+    "searchType": {
+      "inheritance": "Parent (group)",
+      "prefix": "Prefix",
+      "suffix": "Suffix",
+      "meta": "Meta",
+      "weight": "Weight",
+      "display_name": "Display Name",
+      "regex_permission": "Regex permission"
+    }
   }
 }
