@@ -320,6 +320,7 @@ export const PERMISSION_KEYS = [
   'motd',
   'serverControl',
   'luckperms',
+  'drasl',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -434,4 +435,42 @@ export interface LuckPermsUserSearchResult {
 export interface LuckPermsGroupSearchResult {
   name: string;
   results: LuckPermsNode[];
+}
+
+// ---------------------------------------------------------------------------
+// Drasl (optional - talks to Drasl's own admin API via the backend proxy,
+// see backend/src/services/drasl.service.ts). Scoped to user accounts and
+// invites only - see README's Drasl section.
+// ---------------------------------------------------------------------------
+
+export interface DraslUser {
+  uuid: string;
+  username: string;
+  isAdmin: boolean;
+  isLocked: boolean;
+  maxPlayerCount: number;
+  preferredLanguage: string;
+  players: { uuid: string; name: string }[];
+}
+
+export interface DraslCreateUserRequest {
+  username: string;
+  password?: string;
+  isAdmin: boolean;
+  isLocked: boolean;
+  maxPlayerCount?: number;
+}
+
+export interface DraslUpdateUserRequest {
+  password?: string;
+  isAdmin?: boolean;
+  isLocked?: boolean;
+  maxPlayerCount?: number;
+  resetApiToken?: boolean;
+}
+
+export interface DraslInvite {
+  code: string;
+  url: string;
+  createdAt: string;
 }

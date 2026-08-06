@@ -225,6 +225,18 @@ export const env = {
     apiKey: process.env.LUCKPERMS_API_KEY?.trim() || undefined,
   },
 
+  // Backs the Drasl tab (admin-only: user accounts + invites). Same shape
+  // as the LuckPerms integration above - a separate HTTP service, not
+  // reached over SSH. Unlike LuckPerms' static optional key, Drasl's
+  // token is mandatory once configured: there's no "no auth required"
+  // mode, every admin API call needs it. Obtained once by logging in as a
+  // Drasl admin (POST /drasl/api/v2/login) and copying the returned
+  // apiToken - see README's Drasl section.
+  drasl: {
+    apiUrl: process.env.DRASL_API_URL?.trim().replace(/\/+$/, '') || undefined,
+    apiToken: process.env.DRASL_API_TOKEN?.trim() || undefined,
+  },
+
   // Local directory ON THIS BACKEND'S HOST (not the target server - no SSH
   // involved) where the scheduler and audit log persist their JSON state.
   dataDir: optional('DATA_DIR', './data'),

@@ -19,6 +19,7 @@ import rconRoutes from './routes/rcon.routes';
 import auditLogRoutes from './routes/auditLog.routes';
 import usersRoutes from './routes/users.routes';
 import luckPermsRoutes from './routes/luckperms.routes';
+import draslRoutes from './routes/drasl.routes';
 import { setupWebSockets } from './ws';
 import { rconService } from './services/rcon.service';
 import { sshService } from './services/ssh.service';
@@ -52,6 +53,7 @@ app.use('/api/rcon', rconRoutes);
 app.use('/api/audit-log', auditLogRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/luckperms', luckPermsRoutes);
+app.use('/api/drasl', draslRoutes);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
