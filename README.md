@@ -39,13 +39,14 @@ the short version, skip to [Quick start](#quick-start).
 13. [Ops](#ops)
 14. [MOTD (BetterMOTD)](#motd-bettermotd)
 15. [LuckPerms](#luckperms)
-16. [Audit log](#audit-log)
-17. [Localization](#localization)
-18. [Running in production](#running-in-production)
-19. [Running with systemd](#running-with-systemd)
-20. [Docker](#docker)
-21. [Development mode](#development-mode)
-22. [Troubleshooting](#troubleshooting)
+16. [Drasl](#drasl)
+17. [Audit log](#audit-log)
+18. [Localization](#localization)
+19. [Running in production](#running-in-production)
+20. [Running with systemd](#running-with-systemd)
+21. [Docker](#docker)
+22. [Development mode](#development-mode)
+23. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -244,6 +245,13 @@ backend refusing to start.
 | `LUCKPERMS_API_URL` | `http://127.0.0.1:8080` | Base URL of the **LuckPerms REST API extension** (not part of LuckPerms itself - see [LuckPerms](#luckperms) below for what has to be deployed first). Optional, like `MC_CONTAINER`/`PLUGINS_DIR` - unset means the tab shows a "not configured" message. Reached as a plain HTTP call, **not** over the shared SSH connection - same reachability assumption as `RCON_HOST`/`PORT`. |
 | `LUCKPERMS_API_KEY` | `myverysecureapikey` | Only needed if the extension's own auth (`LUCKPERMS_REST_AUTH`) is enabled - sent as `Authorization: Bearer <key>`. Leaving both unset means anyone who can reach the port controls every player's permissions - see [Security](#security). |
 
+### Drasl
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `DRASL_API_URL` | `http://127.0.0.1:25585` | Base URL of a **Drasl** instance's admin API (see [Drasl](#drasl) below). Optional, like `LUCKPERMS_API_URL` - unset means the tab shows a "not configured" message. Reached as a plain HTTP call, **not** over the shared SSH connection. |
+| `DRASL_API_TOKEN` | `Bq608AtLeG7emJOdvXHYxL` | An admin API token, obtained by logging in as a Drasl admin once - see [Drasl](#drasl) for the exact command. Unlike `LUCKPERMS_API_KEY`, this is **mandatory** once `DRASL_API_URL` is set - every call needs it. |
+
 ### Local data storage
 
 Unlike every other path in this file, this one is **not** on the target
@@ -290,6 +298,7 @@ that live on the Dashboard itself rather than a tab of their own:
 | `ops` | Ops tab |
 | `motd` | MOTD tab |
 | `luckperms` | LuckPerms tab - see [LuckPerms](#luckperms). Grants full control over every player's in-game permissions; consider carefully before granting it to a non-admin. |
+| `drasl` | Drasl tab - see [Drasl](#drasl). Grants full control over Drasl accounts (including creating other admin accounts and resetting passwords); consider carefully before granting it to a non-admin. |
 | `serverControl` | Dashboard's Start/Stop/Restart buttons, plus its embedded player-management (kick/ban/op/whitelist-add) and broadcast actions |
 
 Dashboard's monitoring (server status, metrics charts, live output) and the
@@ -920,6 +929,64 @@ after the first few groups load - not a fake or hardcoded list.
 
 ---
 
+## Drasl
+
+An admin panel for [Drasl](https://github.com/unmojang/drasl), the
+Yggdrasil-compatible auth server that lets a Minecraft server run
+independently of Mojang's own accounts. Scoped to what an admin actually
+needs day-to-day: **managing Drasl user accounts and registration
+invites** - it does not touch players, skins/capes, or OIDC identities
+(Drasl's own admin API covers those too, but nothing here does).
+
+**This talks to Drasl's own admin API** (`/drasl/api/v2`), a plain HTTP
+call like the LuckPerms tab, not something reached over the shared SSH
+connection:
+
+1. Have a running Drasl instance (its own default port is `25585`) and an
+   admin account on it (see Drasl's own docs for `DefaultAdmins`).
+2. Get an API token by logging in once as that admin:
+   ```bash
+   curl -X POST http://<drasl-host>:25585/drasl/api/v2/login \
+     -H 'Content-Type: application/json' \
+     -d '{"username":"<admin-username>","password":"<admin-password>"}'
+   ```
+   Copy the `apiToken` field from the response.
+3. Set `DRASL_API_URL` and `DRASL_API_TOKEN` in `backend/.env` and restart
+   the backend. Unlike `LUCKPERMS_API_KEY`, the token isn't optional once
+   `DRASL_API_URL` is set - every call needs it, there's no "no auth"
+   mode. Unset `DRASL_API_URL` (the default) means the tab shows a clear
+   "not configured" message instead of failing startup - see
+   [Every `.env` variable, explained](#every-env-variable-explained).
+
+The token doesn't expire on its own - it stays valid until something
+explicitly resets it (either from this tab's own **Reset API token**
+option on that admin account, or from Drasl's own UI). If you reset the
+token this backend itself is using, you'll need to log in again and
+update `DRASL_API_TOKEN`.
+
+### Users
+
+Lists every Drasl account: username, admin/locked status, and how many
+players are linked to it out of its `maxPlayerCount`. From here you can:
+
+- **Create** an account (username, optional password - leave it blank for
+  an OIDC-only account, if Drasl's OIDC login is configured), with the
+  admin/locked flags set up front.
+- **Edit** an existing account's admin/locked flags and max player count.
+- **Reset a password**, same idea as Paloondra's own [Creating users](#creating-users)
+  password reset.
+- **Delete** an account - this is permanent and takes every player linked
+  to it with it, confirmed with a danger-styled dialog first.
+
+### Invites
+
+Lists active registration invite links, with **Create** and **Revoke**.
+Anyone holding an invite link can register a new Drasl account with it,
+even if Drasl's open registration is otherwise disabled - so treat these
+like one-time passwords, not something to leave lying around once used.
+
+---
+
 ## Audit log
 
 A small, append-only history of mutating admin actions - script runs
@@ -1359,6 +1426,23 @@ The extension has `LUCKPERMS_REST_AUTH` enabled and either
 own `LUCKPERMS_REST_AUTH_KEYS`. Set/fix `LUCKPERMS_API_KEY` in
 `backend/.env` and restart the backend.
 
+**Drasl tab shows "Drasl tab is not configured"**
+`DRASL_API_URL` isn't set in `backend/.env` - see [Drasl](#drasl).
+
+**Drasl tab shows "Can't reach Drasl's API" after a long wait**
+Same 8s-timeout behavior and the same "long wait vs. instant error" clue
+as the "Can't reach the LuckPerms REST API" entry just above - see that
+one for how to read it and what to check, substituting Drasl's own
+host/port and `curl <DRASL_API_URL>/drasl/api/v2/swagger.json` (Drasl has
+no dedicated `/health` endpoint, but this one needs no auth either, so
+it's just as good a reachability check).
+
+**Drasl tab: "Drasl rejected the request"**
+`DRASL_API_TOKEN` is unset, wrong, or was invalidated (something reset
+that admin account's API token, either from this tab or Drasl's own UI).
+Get a fresh one the same way as initial setup - see [Drasl](#drasl) - and
+update `DRASL_API_TOKEN` in `backend/.env`, then restart the backend.
+
 **Whitelist/Ops/bukkit.yml/spigot.yml tabs show a "not configured" message**
 `SERVER_ROOT_DIR` isn't set in `backend/.env` - all five files
 (`server.properties`, `bukkit.yml`, `spigot.yml`, `whitelist.json`,
@@ -1570,6 +1654,7 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
 | **Ops** | View/add/remove operators via RCON (instant), plus a per-player permission level editor (edits `ops.json` directly, requires a restart) - see [Ops](#ops) |
 | **MOTD** | Form + raw-text editor for the BetterMOTD plugin's `config.yml` (profiles, presets, maintenance mode, player-count display), auto-reloaded live over RCON after every save - see [MOTD (BetterMOTD)](#motd-bettermotd) |
 | **LuckPerms** | Permissions/groups/tracks editor modeled on LuckPerms' own web editor, talking to the separately-deployed LuckPerms REST API extension - requires `LUCKPERMS_API_URL` to be set - see [LuckPerms](#luckperms) |
+| **Drasl** | Manage Drasl user accounts (create/edit/lock/delete, password reset) and registration invites - requires `DRASL_API_URL`/`DRASL_API_TOKEN` to be set - see [Drasl](#drasl) |
 | **Users** | Admin-only. Add/remove panel accounts, change someone's role, reset a password - see [Creating users](#creating-users) |
 
 ## Notes on the implementation
@@ -1723,3 +1808,11 @@ docker-compose.yml, backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf
   from anywhere beyond `127.0.0.1`, turn its auth on and put it behind a
   TLS-terminating reverse proxy, the same as you would for the backend
   itself (see [Put it behind HTTPS](#put-it-behind-https)).
+- **The Drasl tab is similarly powerful** - it can create new admin
+  accounts (including on Drasl itself) and reset any account's password.
+  Grant the `drasl` permission at least as carefully as the admin role
+  itself. `DRASL_API_TOKEN` is a credential like `LUCKPERMS_API_KEY` - it
+  never reaches the frontend, only the backend uses it, and unlike
+  `LUCKPERMS_API_KEY` it's always required once `DRASL_API_URL` is set, so
+  there's no "unauthenticated" footgun to worry about here the way there
+  is with the LuckPerms extension.

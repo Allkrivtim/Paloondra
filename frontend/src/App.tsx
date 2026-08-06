@@ -22,6 +22,7 @@ const Whitelist = lazy(() => import('./components/tabs/Whitelist'));
 const Ops = lazy(() => import('./components/tabs/Ops'));
 const Motd = lazy(() => import('./components/tabs/Motd'));
 const LuckPerms = lazy(() => import('./components/tabs/LuckPerms'));
+const Drasl = lazy(() => import('./components/tabs/Drasl'));
 const Users = lazy(() => import('./components/tabs/Users'));
 
 function TabFallback() {
@@ -152,6 +153,16 @@ export default function App() {
                   <ProtectedRoute permission="luckperms">
                     <Suspense fallback={<TabFallback />}>
                       <LuckPerms />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="drasl"
+                element={
+                  <ProtectedRoute permission="drasl">
+                    <Suspense fallback={<TabFallback />}>
+                      <Drasl />
                     </Suspense>
                   </ProtectedRoute>
                 }

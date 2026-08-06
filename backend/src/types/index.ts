@@ -179,6 +179,7 @@ export const PERMISSION_KEYS = [
   'motd',
   'serverControl',
   'luckperms',
+  'drasl',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -328,4 +329,49 @@ export interface LuckPermsUserSearchResult {
 export interface LuckPermsGroupSearchResult {
   name: string;
   results: LuckPermsNode[];
+}
+
+// ---------------------------------------------------------------------------
+// Drasl (optional - talks to the Drasl Yggdrasil server's own admin API -
+// see drasl.service.ts and README's Drasl section). Mirrors
+// https://github.com/unmojang/drasl's api.go, verified directly against its
+// source rather than guessed (it has no published OpenAPI doc). Scoped to
+// admin account management + invites only, per what this tab actually
+// offers - Drasl's API covers players/skins/OIDC too, but nothing here
+// touches those.
+// ---------------------------------------------------------------------------
+
+export interface DraslUser {
+  uuid: string;
+  username: string;
+  isAdmin: boolean;
+  isLocked: boolean;
+  maxPlayerCount: number;
+  preferredLanguage: string;
+  /** Only what's needed to show "N player(s)" - not the full player objects (this tab doesn't manage players). */
+  players: { uuid: string; name: string }[];
+}
+
+export interface DraslCreateUserRequest {
+  username: string;
+  /** Undefined/omitted for an OIDC-only account (not offered by this tab's form, but the API allows it). */
+  password?: string;
+  isAdmin: boolean;
+  isLocked: boolean;
+  maxPlayerCount?: number;
+}
+
+/** All fields optional - only send what actually changed. `resetApiToken: true` invalidates that user's existing Drasl API token (e.g. if it's the one this backend itself uses, forcing a re-issue). */
+export interface DraslUpdateUserRequest {
+  password?: string;
+  isAdmin?: boolean;
+  isLocked?: boolean;
+  maxPlayerCount?: number;
+  resetApiToken?: boolean;
+}
+
+export interface DraslInvite {
+  code: string;
+  url: string;
+  createdAt: string;
 }
