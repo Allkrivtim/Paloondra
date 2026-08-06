@@ -37,7 +37,7 @@ const REQUEST_TIMEOUT_MS = 8000;
  * (assumed reachable from wherever this backend runs). See README's
  * LuckPerms section for what has to be deployed before this works.
  */
-async function lpFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function lpFetch<T>(path: string, init?: RequestInit, opts?: { expectBody?: boolean }): Promise<T> {
   if (!env.luckperms.apiUrl) {
     throw new LuckPermsApiError('LUCKPERMS_API_URL is not configured - set it in backend/.env to use the LuckPerms tab');
   }
@@ -84,9 +84,17 @@ async function lpFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new LuckPermsApiError(`LuckPerms REST API returned HTTP ${response.status}${detail ? `: ${detail.slice(0, 300)}` : ''}`, response.status);
   }
 
-  // Some endpoints (node mutations, deletes) respond 200/202/204 with no
-  // body, or an empty body - JSON-parsing that would throw, so only parse
-  // when there's actually something to parse.
+  // A handful of endpoints (deletes, PATCH reorders) are documented as
+  // returning no body at all on success - but in practice the real
+  // extension doesn't necessarily send back an *empty* body for those, it's
+  // just not JSON (e.g. a plain "OK"). Callers for exactly those endpoints
+  // pass expectBody: false so we don't even try to parse whatever's there -
+  // response.ok is already the actual signal of success.
+  if (opts?.expectBody === false) return undefined as T;
+
+  // Other endpoints (node mutations) respond 200/202/204 with no body, or
+  // an empty body - JSON-parsing that would throw, so only parse when
+  // there's actually something to parse.
   const text = await response.text();
   if (!text) return undefined as T;
   try {
@@ -152,7 +160,7 @@ class LuckPermsService {
   /** `nodes` must be non-empty - the REST API treats an empty body as "delete everything". */
   async deleteUserNodes(uniqueId: string, nodes: LuckPermsNewNode[]): Promise<void> {
     if (nodes.length === 0) throw new LuckPermsApiError('Refusing to delete with an empty node list (the API would delete everything).');
-    await lpFetch(`/user/${encodeURIComponent(uniqueId)}/nodes`, { method: 'DELETE', body: JSON.stringify(nodes) });
+    await lpFetch(`/user/${encodeURIComponent(uniqueId)}/nodes`, { method: 'DELETE', body: JSON.stringify(nodes) }, { expectBody: false });
   }
 
   async promoteUser(uniqueId: string, track: string, context?: LuckPermsContext[]): Promise<void> {
@@ -187,7 +195,7 @@ class LuckPermsService {
   }
 
   async deleteGroup(name: string): Promise<void> {
-    await lpFetch(`/group/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    await lpFetch(`/group/${encodeURIComponent(name)}`, { method: 'DELETE' }, { expectBody: false });
   }
 
   async getGroupNodes(name: string): Promise<LuckPermsNode[]> {
@@ -200,7 +208,7 @@ class LuckPermsService {
 
   async deleteGroupNodes(name: string, nodes: LuckPermsNewNode[]): Promise<void> {
     if (nodes.length === 0) throw new LuckPermsApiError('Refusing to delete with an empty node list (the API would delete everything).');
-    await lpFetch(`/group/${encodeURIComponent(name)}/nodes`, { method: 'DELETE', body: JSON.stringify(nodes) });
+    await lpFetch(`/group/${encodeURIComponent(name)}/nodes`, { method: 'DELETE', body: JSON.stringify(nodes) }, { expectBody: false });
   }
 
   async checkGroupPermission(name: string, key: string, context?: LuckPermsContext[]): Promise<LuckPermsPermissionCheckResult> {
@@ -222,12 +230,12 @@ class LuckPermsService {
   }
 
   async deleteTrack(name: string): Promise<void> {
-    await lpFetch(`/track/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    await lpFetch(`/track/${encodeURIComponent(name)}`, { method: 'DELETE' }, { expectBody: false });
   }
 
   /** Sends the full ordered group list - this is how reordering, adding, and removing groups on a track all happen (there's no separate insert/reorder endpoint). */
   async setTrackGroups(name: string, groups: string[]): Promise<void> {
-    await lpFetch(`/track/${encodeURIComponent(name)}`, { method: 'PATCH', body: JSON.stringify({ groups }) });
+    await lpFetch(`/track/${encodeURIComponent(name)}`, { method: 'PATCH', body: JSON.stringify({ groups }) }, { expectBody: false });
   }
 }
 
